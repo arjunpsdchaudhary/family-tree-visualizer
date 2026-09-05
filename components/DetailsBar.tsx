@@ -160,7 +160,7 @@ const DetailsBar = () => {
 
     const dob = formData.get("dob")?.toString();
 
-    const location = formData.get("location")?.toString().trim();
+    const phone = formData.get("phone")?.toString().trim();
 
     if (!name) {
       console.error("Cannot create first node: name is required.");
@@ -184,7 +184,7 @@ const DetailsBar = () => {
 
       imageUrl: newNodePreview || undefined,
 
-      location: location || undefined,
+      phone: phone || undefined,
     };
 
     await createFirstNode(person);
@@ -221,7 +221,7 @@ const DetailsBar = () => {
 
     const relationship = formData.get("relationship")?.toString();
 
-    const location = formData.get("location")?.toString().trim();
+    const phone = formData.get("phone")?.toString().trim();
 
     if (!name) {
       console.error("Cannot add family member: name is required.");
@@ -275,7 +275,7 @@ const DetailsBar = () => {
 
       imageUrl: newNodePreview || undefined,
 
-      location: location || undefined,
+      phone: phone || undefined,
     };
 
     if (relationship === "child") {
@@ -332,7 +332,7 @@ const DetailsBar = () => {
 
     const dob = formData.get("dob")?.toString();
 
-    const location = formData.get("location")?.toString().trim();
+    const phone = formData.get("phone")?.toString().trim();
 
     if (!name) {
       alert("Name is required.");
@@ -356,7 +356,7 @@ const DetailsBar = () => {
 
       imageUrl: profilePreview || undefined,
 
-      location: location || undefined,
+      phone: phone || undefined,
     };
 
     await updatePerson(updatedPerson);
@@ -704,8 +704,8 @@ const DetailsBar = () => {
                   <Field
                     label="Location"
                     id="edit-location"
-                    name="location"
-                    defaultValue={selectedPerson.location}
+                    name="phone"
+                    defaultValue={selectedPerson.phone}
                     placeholder="Enter location"
                   />
 
@@ -730,7 +730,7 @@ const DetailsBar = () => {
                     capitalize
                   />
 
-                  <InfoRow label="Location" value={selectedPerson.location} />
+                  <InfoRow label="phone" value={selectedPerson.phone} />
                 </div>
               )}
             </section>

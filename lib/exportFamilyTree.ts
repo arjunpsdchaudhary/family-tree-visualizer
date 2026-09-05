@@ -2,7 +2,7 @@ import { type Edge, type Node } from "@xyflow/react";
 
 import { toPng, toSvg } from "html-to-image";
 
-type ExportFormat = "png" | "svg";
+type ExportFormat = "png" | "svg" | "pdf" | "json";
 
 export async function exportFamilyTree(
   nodes: Node[],

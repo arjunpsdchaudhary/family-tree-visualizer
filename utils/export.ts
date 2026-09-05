@@ -40,7 +40,7 @@ export const exportFullDiagram = async (format = "png") => {
   // Give React time to render
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  const element = document.querySelector(".react-flow");
+  const element = document.querySelector(".react-flow") as HTMLElement | null;
 
   if (!element) {
     await setViewport(originalViewport);

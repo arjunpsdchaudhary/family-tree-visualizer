@@ -1340,7 +1340,9 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
    */
 
   const exportPNG = async () => {
-    const element = document.querySelector(".family-tree-flow");
+    const element = document.querySelector(
+      ".family-tree-flow",
+    ) as HTMLElement | null;
 
     if (!element) {
       return;
@@ -1368,7 +1370,9 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
    */
 
   const exportSVG = async () => {
-    const element = document.querySelector(".family-tree-flow");
+    const element = document.querySelector(
+      ".family-tree-flow",
+    ) as HTMLElement | null;
 
     if (!element) {
       return;
