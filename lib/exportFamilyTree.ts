@@ -1,6 +1,6 @@
 import { type Edge, type Node } from "@xyflow/react";
-
 import { toPng, toSvg } from "html-to-image";
+import { jsPDF } from "jspdf";
 
 type ExportFormat = "png" | "svg" | "pdf" | "json";
 
@@ -38,7 +38,34 @@ export async function exportFamilyTree(
   }
 
   // ==================================================
-  // 2. Get visible nodes
+  // 2. JSON Export
+  //
+  // This is intentionally done before any DOM/style
+  // manipulation because JSON does not need the
+  // rendered React Flow canvas.
+  // ==================================================
+
+  if (format === "json") {
+    const exportData = {
+      nodes,
+      edges,
+    };
+
+    const json = JSON.stringify(exportData, null, 2);
+
+    const blob = new Blob([json], {
+      type: "application/json",
+    });
+
+    downloadBlob(blob, "family-tree.json");
+
+    console.log("Family tree JSON export completed.");
+
+    return;
+  }
+
+  // ==================================================
+  // 3. Get visible nodes
   // ==================================================
 
   const visibleNodes = nodes.filter((node) => !node.hidden);
@@ -48,7 +75,7 @@ export async function exportFamilyTree(
   }
 
   // ==================================================
-  // 3. IMPORTANT
+  // 4. IMPORTANT
   //
   // We DO NOT use getNodesBounds().
   //
@@ -64,7 +91,7 @@ export async function exportFamilyTree(
   }
 
   // ==================================================
-  // 4. Get React Flow viewport transform
+  // 5. Get React Flow viewport transform
   //
   // We need to convert screen/DOM coordinates
   // back into React Flow coordinates.
@@ -74,8 +101,12 @@ export async function exportFamilyTree(
 
   const reactFlowRect = reactFlow.getBoundingClientRect();
 
+  // Prevent unused-variable warning while preserving
+  // the original behavior/code structure.
+  void reactFlowRect;
+
   // ==================================================
-  // 5. Calculate actual visual bounds
+  // 6. Calculate actual visual bounds
   // ==================================================
 
   let minX = Infinity;
@@ -94,12 +125,12 @@ export async function exportFamilyTree(
     const rect = element.getBoundingClientRect();
 
     /*
-        Convert browser coordinates into
-        React Flow canvas coordinates.
+      Convert browser coordinates into
+      React Flow canvas coordinates.
 
-        Because the viewport may be transformed,
-        we divide by the current zoom.
-      */
+      Because the viewport may be transformed,
+      we divide by the current zoom.
+    */
 
     const style = window.getComputedStyle(viewport);
 
@@ -133,7 +164,7 @@ export async function exportFamilyTree(
   });
 
   // ==================================================
-  // 6. Safety check
+  // 7. Safety check
   // ==================================================
 
   if (
@@ -146,7 +177,7 @@ export async function exportFamilyTree(
   }
 
   // ==================================================
-  // 7. Padding
+  // 8. Padding
   // ==================================================
 
   const padding = 200;
@@ -174,7 +205,7 @@ export async function exportFamilyTree(
   });
 
   // ==================================================
-  // 8. Save original styles
+  // 9. Save original styles
   // ==================================================
 
   const originalWidth = reactFlow.style.width;
@@ -189,7 +220,7 @@ export async function exportFamilyTree(
 
   try {
     // =================================================
-    // 9. Set exact export canvas
+    // 10. Set exact export canvas
     // =================================================
 
     reactFlow.style.width = `${exportWidth}px`;
@@ -199,7 +230,7 @@ export async function exportFamilyTree(
     reactFlow.style.overflow = "hidden";
 
     // =================================================
-    // 10. Move the ACTUAL visual bounds
+    // 11. Move the ACTUAL visual bounds
     //     into the export canvas
     // =================================================
 
@@ -212,13 +243,13 @@ export async function exportFamilyTree(
     viewport.style.transform = `translate(${translateX}px, ${translateY}px) scale(1)`;
 
     // =================================================
-    // 11. Wait for paint
+    // 12. Wait for paint
     // =================================================
 
     await waitForRender();
 
     // =================================================
-    // 12. Export PNG
+    // 13. Export PNG
     // =================================================
 
     if (format === "png") {
@@ -246,7 +277,7 @@ export async function exportFamilyTree(
     }
 
     // =================================================
-    // 13. Export SVG
+    // 14. Export SVG
     // =================================================
 
     if (format === "svg") {
@@ -271,10 +302,73 @@ export async function exportFamilyTree(
       download(dataUrl, "family-tree.svg");
     }
 
+    // =================================================
+    // 15. Export PDF
+    //
+    // Generate the exact same PNG used by the PNG
+    // export, then place it into a PDF.
+    // =================================================
+
+    if (format === "pdf") {
+      const dataUrl = await toPng(reactFlow, {
+        backgroundColor: "#ffffff",
+
+        width: exportWidth,
+
+        height: exportHeight,
+
+        pixelRatio: 2,
+
+        cacheBust: true,
+
+        style: {
+          width: `${exportWidth}px`,
+
+          height: `${exportHeight}px`,
+
+          overflow: "hidden",
+        },
+      });
+
+      /*
+        Use millimeters based on the pixel dimensions.
+
+        96 CSS pixels = 25.4mm.
+      */
+
+      const pxToMm = 25.4 / 96;
+
+      const pdfWidth = exportWidth * pxToMm;
+      const pdfHeight = exportHeight * pxToMm;
+
+      const orientation = pdfWidth > pdfHeight ? "landscape" : "portrait";
+
+      const pdf = new jsPDF({
+        orientation,
+        unit: "mm",
+        format: [pdfWidth, pdfHeight],
+      });
+
+      pdf.addImage(
+        dataUrl,
+        "PNG",
+        0,
+        0,
+        pdfWidth,
+        pdfHeight,
+        undefined,
+        "FAST",
+      );
+
+      pdf.save("family-tree.pdf");
+
+      console.log("Family tree PDF export completed.");
+    }
+
     console.log("Family tree export completed.");
   } finally {
     // =================================================
-    // 14. Restore everything
+    // 16. Restore everything
     // =================================================
 
     reactFlow.style.width = originalWidth;
@@ -304,7 +398,7 @@ function waitForRender() {
 }
 
 // ====================================================
-// Download
+// Download data URL
 // ====================================================
 
 function download(dataUrl: string, filename: string) {
@@ -318,4 +412,25 @@ function download(dataUrl: string, filename: string) {
   link.click();
 
   link.remove();
+}
+
+// ====================================================
+// Download Blob
+// ====================================================
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+
+  link.download = filename;
+  link.href = url;
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  link.remove();
+
+  URL.revokeObjectURL(url);
 }
