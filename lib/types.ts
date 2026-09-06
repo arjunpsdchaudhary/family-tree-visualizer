@@ -2,6 +2,8 @@ export interface Person {
   id: string;
   name: string;
   dob?: string;
+  dod?: string;
+
   age?: number;
   gender?: "male" | "female" | "other";
   fatherId?: string;

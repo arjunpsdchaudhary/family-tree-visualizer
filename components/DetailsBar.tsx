@@ -4,6 +4,61 @@ import { Person } from "@/lib/types";
 import { useData } from "@/contexts/DataContextProvider";
 import React, { useEffect, useRef, useState } from "react";
 
+/* =========================================================
+   AGE CALCULATION
+========================================================= */
+
+const calculateAge = (
+  dob?: string | null,
+  dod?: string | null,
+): number | null => {
+  if (!dob) return null;
+
+  const birthDate = new Date(`${dob}T00:00:00`);
+
+  if (Number.isNaN(birthDate.getTime())) {
+    return null;
+  }
+
+  const endDate = dod ? new Date(`${dod}T00:00:00`) : new Date();
+
+  if (Number.isNaN(endDate.getTime())) {
+    return null;
+  }
+
+  // Don't calculate an age for an invalid/future DOB.
+  if (birthDate > endDate) {
+    return null;
+  }
+
+  let age = endDate.getFullYear() - birthDate.getFullYear();
+
+  const monthDifference = endDate.getMonth() - birthDate.getMonth();
+
+  if (
+    monthDifference < 0 ||
+    (monthDifference === 0 && endDate.getDate() < birthDate.getDate())
+  ) {
+    age--;
+  }
+
+  return Math.max(age, 0);
+};
+
+/* =========================================================
+   FORMAT AGE
+========================================================= */
+
+const getPersonAge = (person?: Person | null): number | null => {
+  if (!person) return null;
+
+  return calculateAge(person.dob, person.dod);
+};
+
+/* =========================================================
+   DETAILS BAR
+========================================================= */
+
 const DetailsBar = () => {
   const {
     selectedPerson,
@@ -47,6 +102,51 @@ const DetailsBar = () => {
   const newNodeImageRef = useRef<HTMLInputElement>(null);
 
   const hasNodes = Array.isArray(nodes) && nodes.length > 0;
+
+  /*
+   * =========================================================
+   * ALIVE / DECEASED COUNTS
+   *
+   * A FamilyUnit can contain:
+   * - person
+   * - spouse
+   *
+   * We use a Map by person.id so nobody gets counted twice.
+   * =========================================================
+   */
+
+  const { aliveCount, deceasedCount } = React.useMemo(() => {
+    const people = new Map<string, Person>();
+
+    nodes.forEach((node) => {
+      const person = node.data?.person as Person | undefined;
+      const spouse = node.data?.spouse as Person | undefined;
+
+      if (person?.id) {
+        people.set(person.id, person);
+      }
+
+      if (spouse?.id) {
+        people.set(spouse.id, spouse);
+      }
+    });
+
+    let alive = 0;
+    let deceased = 0;
+
+    people.forEach((person) => {
+      if (person.dod) {
+        deceased++;
+      } else {
+        alive++;
+      }
+    });
+
+    return {
+      aliveCount: alive,
+      deceasedCount: deceased,
+    };
+  }, [nodes]);
 
   /*
    * =========================================================
@@ -160,6 +260,8 @@ const DetailsBar = () => {
 
     const dob = formData.get("dob")?.toString();
 
+    const dod = formData.get("dod")?.toString();
+
     const phone = formData.get("phone")?.toString().trim();
 
     if (!name) {
@@ -174,6 +276,8 @@ const DetailsBar = () => {
       name,
 
       dob: dob || undefined,
+
+      dod: dod || undefined,
 
       gender:
         newNodeGender === "male" ||
@@ -218,6 +322,8 @@ const DetailsBar = () => {
     const name = formData.get("name")?.toString().trim();
 
     const dob = formData.get("dob")?.toString();
+
+    const dod = formData.get("dod")?.toString();
 
     const relationship = formData.get("relationship")?.toString();
 
@@ -265,6 +371,8 @@ const DetailsBar = () => {
       name,
 
       dob: dob || undefined,
+
+      dod: dod || undefined,
 
       gender:
         newNodeGender === "male" ||
@@ -332,6 +440,8 @@ const DetailsBar = () => {
 
     const dob = formData.get("dob")?.toString();
 
+    const dod = formData.get("dod")?.toString();
+
     const phone = formData.get("phone")?.toString().trim();
 
     if (!name) {
@@ -346,6 +456,8 @@ const DetailsBar = () => {
       name,
 
       dob: dob || undefined,
+
+      dod: dod || undefined,
 
       gender:
         editGender === "male" ||
@@ -450,17 +562,11 @@ const DetailsBar = () => {
       return;
     }
 
-    /*
-     * IMPORTANT:
-     *
-     * Your DataContextProvider needs to expose a
-     * deletePerson() function through useData().
-     */
-
     try {
       await deletePerson(selectedPerson.id);
 
       setIsEditing(false);
+
       setProfilePreview(null);
     } catch (error) {
       console.error("Failed to delete person:", error);
@@ -480,7 +586,41 @@ const DetailsBar = () => {
       ====================================================== */}
 
       <div className="border-b border-slate-200 px-4 py-4">
-        <h2 className="text-sm font-semibold text-slate-900">Family Tree</h2>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="text-sm font-semibold text-slate-900">
+              Family Tree
+            </h2>
+
+            <div className="flex shrink-0 items-center gap-1.5">
+              {/* Alive count */}
+
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600"
+                title={`${aliveCount} alive`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                {aliveCount}
+              </span>
+
+              {/* Deceased count */}
+
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500"
+                title={`${deceasedCount} deceased`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                {deceasedCount}
+              </span>
+            </div>
+          </div>
+
+          {/* Optional total */}
+
+          <span className="text-[10px] text-slate-400">
+            {aliveCount + deceasedCount} people
+          </span>
+        </div>
 
         <div className="relative mt-3">
           <SearchIcon />
@@ -539,6 +679,14 @@ const DetailsBar = () => {
                           {result.person.gender || "Gender not specified"}
                         </p>
                       </div>
+
+                      {/* Show deceased status in search */}
+
+                      {result.person.dod && (
+                        <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">
+                          Deceased
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -576,8 +724,8 @@ const DetailsBar = () => {
         ) : (
           <>
             {/* =================================================
-    SELECTED PERSON
-================================================== */}
+                SELECTED PERSON
+            ================================================== */}
 
             <section className="border-b border-slate-100 px-4 py-4">
               <div
@@ -623,14 +771,26 @@ const DetailsBar = () => {
               </div>
 
               {/* =================================================
-      NAME + ACTION BUTTONS
-  ================================================== */}
+                  NAME + ACTION BUTTONS
+              ================================================== */}
 
               <div className="mt-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="truncate text-base font-semibold text-slate-900">
-                    {selectedPerson.name}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="truncate text-base font-semibold text-slate-900">
+                      {selectedPerson.name}
+                    </h3>
+
+                    {selectedPerson.dod ? (
+                      <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">
+                        Deceased
+                      </span>
+                    ) : (
+                      <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-medium text-emerald-600">
+                        Alive
+                      </span>
+                    )}
+                  </div>
 
                   <p className="mt-0.5 text-xs capitalize text-slate-500">
                     {selectedPerson.gender || "Gender not specified"}
@@ -699,14 +859,22 @@ const DetailsBar = () => {
                     defaultValue={selectedPerson.dob}
                   />
 
+                  <Field
+                    label="Date of death"
+                    id="edit-dod"
+                    name="dod"
+                    type="date"
+                    defaultValue={selectedPerson.dod}
+                  />
+
                   <GenderSelector value={editGender} onChange={setEditGender} />
 
                   <Field
-                    label="Location"
-                    id="edit-location"
+                    label="Phone"
+                    id="edit-phone"
                     name="phone"
                     defaultValue={selectedPerson.phone}
-                    placeholder="Enter location"
+                    placeholder="Enter phone number"
                   />
 
                   <button
@@ -722,7 +890,12 @@ const DetailsBar = () => {
 
                   <InfoRow label="Date of birth" value={selectedPerson.dob} />
 
-                  <InfoRow label="Age" value={selectedPerson.age} />
+                  <InfoRow label="Date of death" value={selectedPerson.dod} />
+
+                  <InfoRow
+                    label={selectedPerson.dod ? "Age at death" : "Age"}
+                    value={getPersonAge(selectedPerson)}
+                  />
 
                   <InfoRow
                     label="Gender"
@@ -730,7 +903,7 @@ const DetailsBar = () => {
                     capitalize
                   />
 
-                  <InfoRow label="phone" value={selectedPerson.phone} />
+                  <InfoRow label="Phone" value={selectedPerson.phone} />
                 </div>
               )}
             </section>
@@ -792,6 +965,13 @@ const DetailsBar = () => {
                       type="date"
                     />
 
+                    <Field
+                      label="Date of death"
+                      id="node-dod"
+                      name="dod"
+                      type="date"
+                    />
+
                     <GenderSelector
                       value={newNodeGender}
                       onChange={setNewNodeGender}
@@ -826,9 +1006,9 @@ const DetailsBar = () => {
                     </div>
 
                     <Field
-                      label="Location"
-                      id="node-location"
-                      name="location"
+                      label="Phone"
+                      id="node-phone"
+                      name="phone"
                       placeholder="Optional"
                     />
 
@@ -1006,7 +1186,7 @@ const InfoRow = ({
           capitalize ? "capitalize" : ""
         }`}
       >
-        {value || "—"}
+        {value !== undefined && value !== null && value !== "" ? value : "—"}
       </span>
     </div>
   );
@@ -1044,10 +1224,6 @@ const EmptyState = ({
       {/* Intro */}
 
       <div className="mb-5">
-        {/* <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-          <PlusIcon />
-        </div> */}
-
         <h3 className="mt-3 text-sm font-semibold text-slate-900">
           Create your family tree
         </h3>
@@ -1102,13 +1278,20 @@ const EmptyState = ({
             type="date"
           />
 
+          <Field
+            label="Date of death"
+            id="first-node-dod"
+            name="dod"
+            type="date"
+          />
+
           <GenderSelector value={gender} onChange={setGender} />
 
           <Field
-            label="Location"
-            id="first-node-location"
-            name="location"
-            placeholder="Optional"
+            label="Phone"
+            id="first-node-phone"
+            name="phone"
+            placeholder="phone"
           />
 
           <div>
