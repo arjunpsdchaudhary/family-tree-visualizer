@@ -1,6 +1,6 @@
 "use client";
 
-import { Handle, Node, Position, useReactFlow } from "@xyflow/react";
+import { Handle, Position, useReactFlow } from "@xyflow/react";
 import type { FamilyUnit, Person } from "@/lib/types";
 import {
   CircleMinus,
@@ -32,6 +32,27 @@ const handleStyle = {
 
 /*
  * =========================================================
+ * DATE HELPER
+ * =========================================================
+ *
+ * Gets only the year from a YYYY-MM-DD date.
+ *
+ * Example:
+ * "1992-04-15" → "1992"
+ */
+
+const getYear = (date?: string | null): string | undefined => {
+  if (!date) {
+    return undefined;
+  }
+
+  const year = date.slice(0, 4);
+
+  return /^\d{4}$/.test(year) ? year : undefined;
+};
+
+/*
+ * =========================================================
  * PERSON CARD
  * =========================================================
  */
@@ -46,10 +67,12 @@ function PersonCard({ person }: { person: Person }) {
   const isFemale = person.gender === "female";
 
   /*
-   * Get birth year from date of birth.
+   * Get only the birth and death years.
    */
 
-  const birthYear = person.dob ? new Date(person.dob).getFullYear() : undefined;
+  const birthYear = getYear(person.dob);
+
+  const deathYear = getYear(person.dod);
 
   return (
     <div
@@ -151,6 +174,10 @@ function PersonCard({ person }: { person: Person }) {
           {person.name}
         </h3>
 
+        {/* =================================================
+            CONTACT INFORMATION
+        ================================================== */}
+
         <div className="mt-2 space-y-1">
           {person.email && (
             <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-slate-500">
@@ -181,13 +208,62 @@ function PersonCard({ person }: { person: Person }) {
           )}
         </div>
 
-        {/* Birth year */}
+        {/* =================================================
+            BIRTH / DEATH INFORMATION
+        ================================================== */}
 
-        <p className="mt-1 text-[11px] font-medium text-slate-400">
-          {birthYear ? `Born ${birthYear}` : "Birth year unknown"}
-        </p>
+        {/*
+         * Display rules:
+         *
+         * No DOB + No DOD:
+         *   Birth year unknown
+         *
+         * DOB only:
+         *   Born on 1992 • Alive
+         *
+         * DOD only:
+         *   Died on 2025
+         *
+         * DOB + DOD:
+         *   Born on 1992 • Died on 2025
+         *
+         * All information intentionally uses neutral
+         * slate colors.
+         */}
 
-        {/* Gender badge */}
+        <div className="mt-1 min-w-0 text-[11px] font-medium text-slate-400">
+          {!birthYear && !deathYear && <span>Birth year unknown</span>}
+
+          {birthYear && !deathYear && (
+            <div className="truncate">
+              <span>Born on {birthYear}</span>
+
+              <span className="mx-1 text-slate-300">•</span>
+
+              <span>Alive</span>
+            </div>
+          )}
+
+          {!birthYear && deathYear && (
+            <div className="truncate">
+              <span>Died on {deathYear}</span>
+            </div>
+          )}
+
+          {birthYear && deathYear && (
+            <div className="truncate">
+              <span>Born on {birthYear}</span>
+
+              <span className="mx-1 text-slate-300">•</span>
+
+              <span>Died on {deathYear}</span>
+            </div>
+          )}
+        </div>
+
+        {/* =================================================
+            GENDER BADGE
+        ================================================== */}
 
         {/* <div className="mt-2">
           {isMale && (
@@ -488,8 +564,6 @@ export default function FamilyUnitNode({
       ================================================== */}
 
       {spouse && <FamilyToggle expanded={toogle} onToggle={onClickHandler} />}
-
-      {/* <FamilyToggle expanded={toogle} onToggle={onClickHandler} /> */}
 
       {/* =================================================
           SPOUSE
