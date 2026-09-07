@@ -3,6 +3,7 @@
 import { Person } from "@/lib/types";
 import { useData } from "@/contexts/DataContextProvider";
 import React, { useEffect, useRef, useState } from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 
 /* =========================================================
    AGE CALCULATION
@@ -600,7 +601,7 @@ const DetailsBar = () => {
                 title={`${aliveCount} alive`}
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                {aliveCount}
+                {aliveCount} <p>alive</p>
               </span>
 
               {/* Deceased count */}
@@ -610,7 +611,7 @@ const DetailsBar = () => {
                 title={`${deceasedCount} deceased`}
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                {deceasedCount}
+                {deceasedCount} <p>died</p>
               </span>
             </div>
           </div>
@@ -930,10 +931,10 @@ const DetailsBar = () => {
 
                 <span
                   className={`flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-500 transition ${
-                    showAddMember ? "rotate-45" : ""
+                    showAddMember ? "rotate-180" : ""
                   }`}
                 >
-                  <PlusIcon />
+                  <ArrowDown />
                 </span>
               </button>
 
@@ -999,9 +1000,9 @@ const DetailsBar = () => {
 
                         <option value="spouse">Spouse</option>
 
-                        <option value="parent">Parent</option>
+                        {/* <option value="parent">Parent</option>
 
-                        <option value="sibling">Sibling</option>
+                        <option value="sibling">Sibling</option> */}
                       </select>
                     </div>
 
@@ -1112,7 +1113,7 @@ const Field = ({
       <input
         id={id}
         name={name}
-        type={type}
+        type={label === "Phone" ? "number" : type}
         defaultValue={defaultValue ?? ""}
         placeholder={placeholder}
         className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10"
