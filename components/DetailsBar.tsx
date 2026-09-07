@@ -580,7 +580,7 @@ const DetailsBar = () => {
    */
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-l border-slate-200 bg-white">
+    <aside className="flex h-1/2 lg:h-full w-full lg:w-80 shrink-0 flex-col border-l border-slate-200 bg-white">
       {/* =====================================================
           HEADER
       ====================================================== */}

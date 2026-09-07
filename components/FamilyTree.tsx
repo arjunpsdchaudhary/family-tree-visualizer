@@ -88,7 +88,7 @@ const FamilyTree = () => {
   return (
     <>
       {/* Normal visible React Flow */}
-      <div className="flex-1 min-w-0 min-h-0">
+      <div className="flex-1 min-w-0 min-h-0 ">
         <ReactFlow
           nodes={nodes}
           edges={edges}
