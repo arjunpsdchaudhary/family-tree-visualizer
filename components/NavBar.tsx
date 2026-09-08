@@ -17,9 +17,10 @@ import {
 
 import { useData } from "@/contexts/DataContextProvider";
 import { exportFamilyTree } from "@/lib/exportFamilyTree";
+import { useCanvas } from "@/contexts/CanvasContextProvider";
 
 const NavBar = () => {
-  const { nodes, edges, setNodes, setEdges } = useData();
+  const { nodes, edges, setNodes, setEdges } = useCanvas();
 
   const [exporting, setExporting] = useState(false);
 

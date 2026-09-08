@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useData } from "@/contexts/DataContextProvider";
 import { useState } from "react";
+import { useFamilyTreeView } from "@/contexts/FamilyTreeViewContextProvider";
 
 /*
  * =========================================================
@@ -58,7 +59,7 @@ const getYear = (date?: string | null): string | undefined => {
  */
 
 function PersonCard({ person }: { person: Person }) {
-  const { setSelectedPerson, selectedPerson } = useData();
+  const { setSelectedPerson, selectedPerson } = useFamilyTreeView();
 
   const isSelected = selectedPerson?.id === person.id;
 
@@ -495,7 +496,7 @@ export default function FamilyUnitNode({
 
   const { getNode } = useReactFlow();
 
-  const { ToogleNodes } = useData();
+  const { toogleNodes } = useFamilyTreeView();
 
   /*
    * true  = descendants are visible
@@ -512,6 +513,7 @@ export default function FamilyUnitNode({
 
   const onClickHandler = () => {
     const node = getNode(id);
+    console.log("node id:", node);
 
     if (!node) {
       return;
@@ -530,7 +532,7 @@ export default function FamilyUnitNode({
      * the current toggle state.
      */
 
-    ToogleNodes(node, currentState);
+    toogleNodes(node, currentState);
   };
 
   return (

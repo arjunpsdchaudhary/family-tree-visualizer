@@ -2,10 +2,43 @@
 
 import Link from "next/link";
 import { ArrowRight, Download, GitBranch } from "lucide-react";
+import FamilyTree from "@/components/FamilyTree";
+import { useEffect, useState } from "react";
+import { layoutFamilyTree } from "@/lib/elkLayout";
+import { familyUnits } from "@/lib/familyData";
+import { Edge, Node } from "@xyflow/react";
+import FamilyTreeViewContextProvider from "@/contexts/FamilyTreeViewContextProvider";
+import FamilyTreeView from "@/components/FamilyTreeView";
+import { Person } from "@/lib/types";
 
 // import FamilyTree from "@/components/FamilyTree";
 
 export default function Home() {
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
+  const [selectedPerson, setseletedP] = useState<Person | undefined>(undefined);
+
+  useEffect(() => {
+    const getdata = async () => {
+      const { nodes, edges } = await layoutFamilyTree(familyUnits);
+      setNodes(nodes);
+      setEdges(edges);
+    };
+    getdata();
+  }, []);
+
+  const handler = (
+    selectedPerson: Person | undefined,
+    setSelectedPerson?: React.Dispatch<
+      React.SetStateAction<Person | undefined>
+    >,
+  ) => {
+    setseletedP(selectedPerson);
+  };
+  useEffect(() => {
+    console.log("landing selected :", selectedPerson);
+  }, [selectedPerson]);
+
   return (
     <main className="min-h-screen bg-white text-slate-900">
       {/* Navbar */}
@@ -71,7 +104,7 @@ export default function Home() {
               </Link>
 
               <Link
-                href="/create"
+                href="/canvas"
                 className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 px-5 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Try without signing in
@@ -101,13 +134,21 @@ export default function Home() {
 
           {/* Right - Tree */}
           <div>
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+            <div className=" rounded-xl border border-slate-200 bg-slate-50">
               {/* Your FamilyTree component goes here */}
 
-              <div className="h-[400px] w-full sm:h-[500px]">
+              <div className="flex h-100 w-full sm:h-125">
                 {/* <FamilyTree /> */}
 
-                <FamilyTreePlaceholder />
+                <FamilyTreeViewContextProvider>
+                  <FamilyTreeView
+                    nodesParam={nodes}
+                    edgesParam={edges}
+                    getdata={handler}
+                  />
+                </FamilyTreeViewContextProvider>
+
+                {/* <FamilyTreePlaceholder /> */}
               </div>
             </div>
 

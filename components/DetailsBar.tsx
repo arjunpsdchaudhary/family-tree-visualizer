@@ -1,9 +1,9 @@
 "use client";
 
 import { Person } from "@/lib/types";
-import { useData } from "@/contexts/DataContextProvider";
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { useCanvas } from "@/contexts/CanvasContextProvider";
 
 /* =========================================================
    AGE CALCULATION
@@ -61,16 +61,21 @@ const getPersonAge = (person?: Person | null): number | null => {
 ========================================================= */
 
 const DetailsBar = () => {
+  // const { addNode, createFirstNode, updatePerson, deletePerson } = useData();
+
   const {
-    selectedPerson,
     nodes,
+    edges,
+    setSelectedPerson,
+    selectedPerson,
+    setSelectedPersonRef,
     addNode,
     createFirstNode,
     updatePerson,
     deletePerson,
-    setSelectedPerson,
-    loadTestFamilyTree,
-  } = useData();
+  } = useCanvas();
+
+  const { loadTestFamilyTree } = useCanvas();
 
   const [search, setSearch] = useState("");
 
@@ -651,7 +656,7 @@ const DetailsBar = () => {
                       key={result.person.id}
                       type="button"
                       onClick={() => {
-                        setSelectedPerson(result.person);
+                        setSelectedPersonRef.current?.(result.person);
 
                         setSearch("");
                       }}
@@ -957,6 +962,7 @@ const DetailsBar = () => {
                       id="node-name"
                       name="name"
                       placeholder="Enter full name"
+                      required={true}
                     />
 
                     <Field
@@ -990,6 +996,7 @@ const DetailsBar = () => {
                         id="relationship"
                         name="relationship"
                         defaultValue=""
+                        required
                         className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10"
                       >
                         <option value="" disabled>
@@ -1093,6 +1100,7 @@ const Field = ({
   type = "text",
   defaultValue,
   placeholder,
+  required = false,
 }: {
   label: string;
   id: string;
@@ -1100,6 +1108,7 @@ const Field = ({
   type?: string;
   defaultValue?: string | number | null;
   placeholder?: string;
+  required?: boolean;
 }) => {
   return (
     <div>
@@ -1112,6 +1121,7 @@ const Field = ({
 
       <input
         id={id}
+        required={required}
         name={name}
         type={label === "Phone" ? "number" : type}
         defaultValue={defaultValue ?? ""}
