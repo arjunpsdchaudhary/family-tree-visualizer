@@ -4,6 +4,7 @@ import "./globals.css";
 import { DataContextProvider } from "@/contexts/DataContextProvider";
 import { ReactFlowProvider } from "@xyflow/react";
 import NavBar from "@/components/NavBar";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <div className=" h-full">{children}</div>
           </DataContextProvider>
         </ReactFlowProvider>
+        <Toaster />;
       </body>
     </html>
   );

@@ -2,11 +2,45 @@
 
 import Link from "next/link";
 import { ArrowRight, GitBranch } from "lucide-react";
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
+import axios from "axios";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function SignInPage() {
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const [email, setEmail] = useState<string>();
+  const [password, setPassword] = useState<string>();
+  const router = useRouter();
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    try {
+      console.log("hello");
+      const data = { email, password };
+
+      const response = await axios.post("/api/signin", data);
+      toast.success(response.data.message);
+      router.push("/dashboard");
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status === 401) {
+          toast.error("Invalid Credentails...");
+          return;
+        }
+
+        if (status === 409) {
+          toast.error("Email already exists");
+        } else if (status === 400) {
+          toast.error("Invalid signup information");
+        } else if (status === 500) {
+          toast.error("Server error. Please try again later.");
+        } else {
+          toast.error("Signup failed");
+        }
+      }
+    }
 
     // Add your signin logic here
   };
@@ -64,6 +98,7 @@ export default function SignInPage() {
                 placeholder="you@example.com"
                 autoComplete="email"
                 required
+                onChange={(e) => setEmail(e.target.value)}
                 className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
               />
             </div>
@@ -93,6 +128,7 @@ export default function SignInPage() {
                 placeholder="Your password"
                 autoComplete="current-password"
                 required
+                onChange={(e) => setPassword(e.target.value)}
                 className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
               />
             </div>
@@ -121,7 +157,7 @@ export default function SignInPage() {
           {/* Guest */}
           <div className="mt-8 border-t border-slate-200 pt-6 text-center">
             <Link
-              href="/create"
+              href="/canvas"
               className="text-sm text-slate-500 hover:text-slate-900"
             >
               Continue without signing in →

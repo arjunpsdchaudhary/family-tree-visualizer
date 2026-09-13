@@ -2,11 +2,41 @@
 
 import Link from "next/link";
 import { ArrowRight, GitBranch } from "lucide-react";
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
+import axios from "axios";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function SignUpPage() {
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const [userName, setUserName] = useState<string>();
+  const [password, setPassword] = useState<string>();
+  const [email, setEmail] = useState<string>();
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const passwordMatch =
+    confirmPassword?.length <= 1 || password === confirmPassword;
+
+  const router = useRouter();
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    try {
+      if (password != confirmPassword) {
+        toast("password didn't matched");
+        return;
+      }
+
+      const user = {
+        userName,
+        email,
+        password,
+      };
+      const response = await axios.post("/api/signup", user);
+
+      toast.success(response.data.message);
+      router.push("/signin");
+    } catch (error: any) {
+      console.error("error", error);
+    }
 
     // Add your signup logic here
   };
@@ -63,6 +93,7 @@ export default function SignUpPage() {
                 type="text"
                 placeholder="Your name"
                 autoComplete="name"
+                onChange={(e) => setUserName(e.target.value)}
                 required
                 className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
               />
@@ -83,6 +114,7 @@ export default function SignUpPage() {
                 type="email"
                 placeholder="you@example.com"
                 autoComplete="email"
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
               />
@@ -103,6 +135,7 @@ export default function SignUpPage() {
                 type="password"
                 placeholder="Create a password"
                 autoComplete="new-password"
+                onChange={(e) => setPassword(e.target.value)}
                 required
                 className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
               />
@@ -123,10 +156,16 @@ export default function SignUpPage() {
                 type="password"
                 placeholder="Confirm your password"
                 autoComplete="new-password"
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
               />
             </div>
+            {!passwordMatch && (
+              <p className="text-red-500 font-extralight ">
+                Passwords do not match
+              </p>
+            )}
 
             {/* Submit */}
             <button
@@ -152,7 +191,7 @@ export default function SignUpPage() {
           {/* Guest */}
           <div className="mt-8 border-t border-slate-200 pt-6 text-center">
             <Link
-              href="/create"
+              href="/canvas"
               className="text-sm text-slate-500 hover:text-slate-900"
             >
               Continue without signing in →
