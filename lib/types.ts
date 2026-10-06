@@ -22,3 +22,22 @@ export interface FamilyUnit {
   childUnitIds: string[];
   hidden?: boolean;
 }
+
+export interface User {
+  id: string;
+  userName: string;
+  email: string;
+}
+
+export interface Canvas {
+  id: string;
+  name?: string;
+  ownerId: string;
+  createdAt: string;
+}
+
+export interface Relationship {
+  from: string;
+  to: string;
+  label: "SPOUSE" | "CHILD";
+}

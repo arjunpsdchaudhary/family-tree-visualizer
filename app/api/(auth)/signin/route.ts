@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       const payload: PasetoPayload = {
         sub: id,
         email,
+        exp: "1 day",
       };
 
       await setSession(payload);

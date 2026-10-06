@@ -13,14 +13,18 @@ import {
   X,
   CheckCircle2,
   AlertCircle,
+  Save,
+  LoaderPinwheel,
 } from "lucide-react";
 
 import { useData } from "@/contexts/DataContextProvider";
 import { exportFamilyTree } from "@/lib/exportFamilyTree";
 import { useCanvas } from "@/contexts/CanvasContextProvider";
+import { saveFamilyTree } from "@/lib/save";
+import { toast } from "sonner";
 
 const NavBar = () => {
-  const { nodes, edges, setNodes, setEdges } = useCanvas();
+  const { nodes, edges, setNodes, setEdges, canvas } = useCanvas();
 
   const [exporting, setExporting] = useState(false);
 
@@ -95,12 +99,25 @@ const NavBar = () => {
       setExportOpen(false);
 
       await exportFamilyTree(nodes, edges, format);
-    } catch (error) {
-      console.error("Export failed:", error);
+    } catch (error:any) {
+      console.error("Export failed:", error.message);
 
       alert("Failed to export family tree.");
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      if (canvas?.id) {
+        await saveFamilyTree(nodes, edges, canvas?.id);
+        toast.success("Canvas Saved...");
+      }
+    } catch (error) {
+      console.error("Saving failed : ", error);
+      alert("Failed to save family tree.");
+    } finally {
     }
   };
 
@@ -308,6 +325,11 @@ const NavBar = () => {
     }
   };
 
+  /*-----------------------------------------------------
+      | SAVE CURRENT STATE IN DB(NEO4J)
+   ------------------------------------------------------   
+   */
+
   return (
     <header
       className="
@@ -384,6 +406,37 @@ const NavBar = () => {
       ====================================================== */}
 
       <div className="flex items-center gap-2">
+        <button
+          className={`
+            inline-flex
+            h-9
+            items-center
+            gap-2
+            rounded-lg
+            border
+            border-slate-200
+            bg-white
+            px-3
+            text-xs
+            font-semibold
+            text-slate-700
+            shadow-sm
+            transition-all
+            hover:border-slate-300
+            hover:bg-slate-50
+            hover:text-slate-900
+            active:scale-[0.98]
+            disabled:cursor-not-allowed
+            disabled:opacity-50
+            
+          `}
+          onClick={handleSave}
+        >
+          {/* {saving ? <LoaderPinwheel className="animate-spin " /> : <Save />} */}
+          <Save />
+
+          {/* {saving ? <p>Saving</p> : <p>save</p>} */}
+        </button>
         {/* Hidden JSON file input */}
 
         <input

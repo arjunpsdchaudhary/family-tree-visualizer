@@ -5,12 +5,21 @@ services:
       POSTGRES_PASSWORD: example
       POSTGRES_USER: example
       POSTGRES_DB: example
-
     ports:
-      - 5432:5432
-
+      - "5432:5432"
     volumes:
-      - db_data:/var/lib/postgresql
+      - db_data:/var/lib/postgresql/data
+
+  neo4j:
+    image: neo4j:latest
+    environment:
+      NEO4J_AUTH: neo4j/example123
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
 
 volumes:
   db_data:
+  neo4j_data:

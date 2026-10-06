@@ -36,7 +36,50 @@ export async function layoutFamilyTree(units: FamilyUnit[]): Promise<{
 }> {
   /*
    * =========================================================
-   * CREATE ELK GRAPH
+   * 1. BUILD A SET OF VALID FAMILY UNIT IDS
+   * =========================================================
+   */
+
+  const unitIds = new Set(units.map((unit) => unit.id));
+
+  /*
+   * Optional but VERY useful while debugging.
+   *
+   * This tells you exactly which relationship is broken.
+   */
+  for (const unit of units) {
+    for (const childId of unit.childUnitIds ?? []) {
+      if (!unitIds.has(childId)) {
+        console.warn(
+          `[ELK] Ignoring dangling family relationship: ` +
+            `${unit.id} -> ${childId}`,
+        );
+      }
+    }
+  }
+
+  /*
+   * =========================================================
+   * 2. CREATE ONLY VALID ELK EDGES
+   * =========================================================
+   *
+   * ELK requires every source and target to exist in
+   * children.
+   */
+
+  const elkEdges = units.flatMap((unit) =>
+    (unit.childUnitIds ?? [])
+      .filter((childId) => unitIds.has(childId))
+      .map((childId) => ({
+        id: `e-${unit.id}-${childId}`,
+        sources: [unit.id],
+        targets: [childId],
+      })),
+  );
+
+  /*
+   * =========================================================
+   * 3. CREATE ELK GRAPH
    * =========================================================
    */
 
@@ -51,18 +94,12 @@ export async function layoutFamilyTree(units: FamilyUnit[]): Promise<{
       height: PERSON_HEIGHT,
     })),
 
-    edges: units.flatMap((unit) =>
-      unit.childUnitIds.map((childId) => ({
-        id: `e-${unit.id}-${childId}`,
-        sources: [unit.id],
-        targets: [childId],
-      })),
-    ),
+    edges: elkEdges,
   };
 
   /*
    * =========================================================
-   * RUN ELK
+   * 4. RUN ELK
    * =========================================================
    */
 
@@ -70,7 +107,7 @@ export async function layoutFamilyTree(units: FamilyUnit[]): Promise<{
 
   /*
    * =========================================================
-   * LOOKUP FAMILY UNITS
+   * 5. LOOKUP FAMILY UNITS
    * =========================================================
    */
 
@@ -78,21 +115,8 @@ export async function layoutFamilyTree(units: FamilyUnit[]): Promise<{
 
   /*
    * =========================================================
-   * CREATE REACT FLOW NODES
+   * 6. CREATE REACT FLOW NODES
    * =========================================================
-   *
-   * IMPORTANT:
-   *
-   * We preserve:
-   *
-   * - person
-   * - spouse
-   * - childUnitIds
-   *
-   * in node.data.
-   *
-   * This allows the DataContextProvider to reconstruct
-   * FamilyUnit[] when a new person is added.
    */
 
   const nodes: Node[] = (result.children ?? []).map((n) => {
@@ -115,50 +139,48 @@ export async function layoutFamilyTree(units: FamilyUnit[]): Promise<{
       data: {
         person: unit.person,
         spouse: unit.spouse,
-
-        /*
-         * VERY IMPORTANT
-         */
         childUnitIds: unit.childUnitIds,
       },
 
       draggable: false,
       selectable: true,
 
-      /*
-       * Preserve hidden state if you use it.
-       */
       hidden: unit.hidden ?? false,
     };
   });
 
   /*
    * =========================================================
-   * CREATE REACT FLOW EDGES
+   * 7. CREATE REACT FLOW EDGES
    * =========================================================
+   *
+   * Use the SAME validation here so React Flow doesn't
+   * receive dangling edges either.
    */
 
   const edges: Edge[] = units.flatMap((unit) =>
-    unit.childUnitIds.map((childId) => ({
-      id: `e-${unit.id}-${childId}`,
+    (unit.childUnitIds ?? [])
+      .filter((childId) => unitIds.has(childId))
+      .map((childId) => ({
+        id: `e-${unit.id}-${childId}`,
 
-      source: unit.id,
-      sourceHandle: "children-out",
+        source: unit.id,
+        sourceHandle: "children-out",
 
-      target: childId,
-      targetHandle: "parent-in",
+        target: childId,
+        targetHandle: "parent-in",
 
-      type: "smoothstep",
+        type: "smoothstep",
 
-      pathOptions: {
-        borderRadius: 2,
-      },
+        pathOptions: {
+          borderRadius: 2,
+        },
 
-      style: {
-        stroke: "#5B7088",
-        strokeWidth: 4,
-      },
-    })),
+        style: {
+          stroke: "#5B7088",
+          strokeWidth: 4,
+        },
+      })),
   );
 
   return {

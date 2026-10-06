@@ -10,7 +10,6 @@ import {
   Phone,
   Venus,
 } from "lucide-react";
-import { useData } from "@/contexts/DataContextProvider";
 import { useState } from "react";
 import { useFamilyTreeView } from "@/contexts/FamilyTreeViewContextProvider";
 
@@ -54,6 +53,59 @@ const getYear = (date?: string | null): string | undefined => {
 
 /*
  * =========================================================
+ * IMAGE HELPERS
+ * =========================================================
+ */
+
+/*
+ * Returns a safe image URL.
+ *
+ * Important:
+ * Your URLs are Vercel Blob URLs such as:
+ *
+ * https://xxxxx.public.blob.vercel-storage.com/...
+ *
+ * These are NOT browser blob: URLs.
+ *
+ * We therefore do NOT use URL.revokeObjectURL().
+ */
+
+const getSafeImageUrl = (
+  imageUrl?: string | null
+): string | undefined => {
+  if (!imageUrl || typeof imageUrl !== "string") {
+    return undefined;
+  }
+
+  const url = imageUrl.trim();
+
+  if (!url) {
+    return undefined;
+  }
+
+  /*
+   * Only allow normal web URLs and browser blob URLs.
+   *
+   * This prevents malformed values such as:
+   * undefined
+   * null
+   * "[object Object]"
+   * ""
+   */
+
+  if (
+    !url.startsWith("http://") &&
+    !url.startsWith("https://") &&
+    !url.startsWith("blob:")
+  ) {
+    return undefined;
+  }
+
+  return url;
+};
+
+/*
+ * =========================================================
  * PERSON CARD
  * =========================================================
  */
@@ -74,6 +126,31 @@ function PersonCard({ person }: { person: Person }) {
   const birthYear = getYear(person.dob);
 
   const deathYear = getYear(person.dod);
+
+  /*
+   * =======================================================
+   * IMAGE STATE
+   * =======================================================
+   *
+   * If the image:
+   *
+   * - expired
+   * - was deleted
+   * - cannot be reached
+   * - has a bad URL
+   * - has a network problem
+   *
+   * the node falls back to the person's initial.
+   *
+   * This keeps the React Flow node alive even if the image
+   * itself cannot be loaded.
+   */
+
+  const [imageError, setImageError] = useState(false);
+
+  const imageUrl = getSafeImageUrl(person.imageUrl);
+
+  const showImage = Boolean(imageUrl && !imageError);
 
   return (
     <div
@@ -117,10 +194,11 @@ function PersonCard({ person }: { person: Person }) {
             shadow-sm
           "
         >
-          {person.imageUrl ? (
+          {showImage ? (
             <img
-              src={person.imageUrl}
-              alt={person.name}
+              src={imageUrl}
+              alt={person.name || "Person"}
+              crossOrigin="anonymous"
               className="
                 h-full
                 w-full
@@ -129,6 +207,13 @@ function PersonCard({ person }: { person: Person }) {
                 duration-300
                 group-hover:scale-105
               "
+              /*
+               * If the image cannot be loaded, immediately
+               * replace it visually with the initial fallback.
+               */
+              onError={() => {
+                setImageError(true);
+              }}
             />
           ) : (
             <div
@@ -213,27 +298,10 @@ function PersonCard({ person }: { person: Person }) {
             BIRTH / DEATH INFORMATION
         ================================================== */}
 
-        {/*
-         * Display rules:
-         *
-         * No DOB + No DOD:
-         *   Birth year unknown
-         *
-         * DOB only:
-         *   Born on 1992 • Alive
-         *
-         * DOD only:
-         *   Died on 2025
-         *
-         * DOB + DOD:
-         *   Born on 1992 • Died on 2025
-         *
-         * All information intentionally uses neutral
-         * slate colors.
-         */}
-
         <div className="mt-1 min-w-0 text-[11px] font-medium text-slate-400">
-          {!birthYear && !deathYear && <span>Birth year unknown</span>}
+          {!birthYear && !deathYear && (
+            <span>Birth year unknown</span>
+          )}
 
           {birthYear && !deathYear && (
             <div className="truncate">
@@ -266,7 +334,8 @@ function PersonCard({ person }: { person: Person }) {
             GENDER BADGE
         ================================================== */}
 
-        {/* <div className="mt-2">
+        {/*
+        <div className="mt-2">
           {isMale && (
             <span
               className="
@@ -323,7 +392,8 @@ function PersonCard({ person }: { person: Person }) {
               Gender not specified
             </span>
           )}
-        </div> */}
+        </div>
+        */}
       </div>
 
       {/* =================================================
@@ -390,9 +460,6 @@ function PersonCard({ person }: { person: Person }) {
  * =========================================================
  * FAMILY TOGGLE
  * =========================================================
- *
- * This button is shown for every FamilyUnit,
- * even if the FamilyUnit does not have a spouse.
  */
 
 function FamilyToggle({
@@ -414,22 +481,6 @@ function FamilyToggle({
         justify-center
       "
     >
-      {/* Connection line */}
-
-      {/* <div
-        className="
-          absolute
-          left-0
-          right-0
-          top-1/2
-          h-[2px]
-          -translate-y-1/2
-          bg-slate-200
-        "
-      /> */}
-
-      {/* Circular toggle button */}
-
       <button
         type="button"
         onClick={(event) => {
@@ -442,8 +493,16 @@ function FamilyToggle({
 
           onToggle();
         }}
-        aria-label={expanded ? "Collapse descendants" : "Expand descendants"}
-        title={expanded ? "Collapse descendants" : "Expand descendants"}
+        aria-label={
+          expanded
+            ? "Collapse descendants"
+            : "Expand descendants"
+        }
+        title={
+          expanded
+            ? "Collapse descendants"
+            : "Expand descendants"
+        }
         className={`
           relative
           z-10
@@ -513,6 +572,7 @@ export default function FamilyUnitNode({
 
   const onClickHandler = () => {
     const node = getNode(id);
+
     console.log("node id:", node);
 
     if (!node) {
@@ -565,7 +625,12 @@ export default function FamilyUnitNode({
           FAMILY TOGGLE
       ================================================== */}
 
-      {spouse && <FamilyToggle expanded={toogle} onToggle={onClickHandler} />}
+      {spouse && (
+        <FamilyToggle
+          expanded={toogle}
+          onToggle={onClickHandler}
+        />
+      )}
 
       {/* =================================================
           SPOUSE

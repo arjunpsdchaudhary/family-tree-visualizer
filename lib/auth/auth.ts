@@ -3,23 +3,22 @@ import { decrypt, encrypt } from "paseto-ts/v4";
 export type PasetoPayload = {
   sub: string;
   email: string;
-
-  exp?: string;
+  exp: string;
 };
 
 const localKey = process.env.PASETO_LOCAL_KEY!;
 
-export async function createToken(payload: PasetoPayload): Promise<string> {
-  const token = encrypt(localKey, payload);
-  return token;
+export function createToken(payload: PasetoPayload): string {
+  return encrypt(localKey, payload);
 }
 
-export async function verifyToken(token: string) {
+export function verifyToken(token: string): PasetoPayload | null {
   try {
     const { payload } = decrypt<PasetoPayload>(localKey, token);
 
     return payload;
-  } catch {
+  } catch (error) {
+    console.error("Token verification failed:", error);
     return null;
   }
 }

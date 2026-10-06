@@ -1,6 +1,6 @@
 "use client";
 import { layoutFamilyTree } from "@/lib/elkLayout";
-import { FamilyUnit, Person } from "@/lib/types";
+import { Canvas, FamilyUnit, Person } from "@/lib/types";
 import {
   createContext,
   Dispatch,
@@ -36,6 +36,9 @@ type CanvasContextType = {
   setNodes: Dispatch<SetStateAction<Node[]>>;
   setEdges: Dispatch<SetStateAction<Edge[]>>;
 
+  canvas: Canvas | null;
+  setCanvas: Dispatch<SetStateAction<Canvas | null>>;
+
   setSelectedPerson: Dispatch<SetStateAction<Person | undefined>>;
   setSelectedPersonRef: RefObject<
     Dispatch<SetStateAction<Person | undefined>> | undefined
@@ -64,6 +67,8 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
 
   const setSelectedPersonRef =
     useRef<Dispatch<SetStateAction<Person | undefined>>>(undefined);
+
+  const [canvas, setCanvas] = useState<Canvas | null>(null);
   //  const handler = (age: number) => {
   //   set
   // };
@@ -821,6 +826,8 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
         deletePerson,
         exportPNG,
         exportSVG,
+        canvas,
+        setCanvas,
       }}
     >
       {children}

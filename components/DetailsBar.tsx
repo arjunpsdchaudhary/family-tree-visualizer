@@ -2,8 +2,29 @@
 
 import { Person } from "@/lib/types";
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, Files } from "lucide-react";
 import { useCanvas } from "@/contexts/CanvasContextProvider";
+import axios from "axios";
+
+import { type PutBlobResult } from "@vercel/blob";
+import { upload } from "@vercel/blob/client";
+
+const extensionMap: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+function getImageExtension(file: File) {
+  const extension = extensionMap[file.type];
+
+  if (!extension) {
+    throw new Error("Unsupported image type");
+  }
+
+  return extension;
+}
 
 /* =========================================================
    AGE CALCULATION
@@ -73,6 +94,7 @@ const DetailsBar = () => {
     createFirstNode,
     updatePerson,
     deletePerson,
+    canvas,
   } = useCanvas();
 
   const { loadTestFamilyTree } = useCanvas();
@@ -221,10 +243,33 @@ const DetailsBar = () => {
    * =========================================================
    */
 
-  const handleProfileImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfileImage = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
+
+    const extension = getImageExtension(file);
+
+    // const pathname = `canvas/${canvas?.id}/nodes/profile-${person.id}.${extension}`;
+
+    const pathname = `canvas/${canvas?.id}/nodes/profile-${selectedPerson?.id}.${extension}`;
+
+    const newBlob = await upload(pathname, file, {
+      access: "public",
+      handleUploadUrl: "/api/avatar/upload",
+    });
+    // console.log("uploaded ....");
+    // person.imageUrl = newBlob.url;
+    if (selectedPerson) {
+      setSelectedPerson({ ...selectedPerson, imageUrl: newBlob.url });
+    }
+    // const uploadUrl = await axios.put(uploadUrl, file, {
+    //   headers: {
+    //     "Content-Type": file.type,
+    //   },
+    // });
 
     const previewUrl = URL.createObjectURL(file);
 
@@ -237,10 +282,13 @@ const DetailsBar = () => {
    * =========================================================
    */
 
+  const [image, setImage] = useState<File | null>(null);
+
   const handleNewNodeImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
+    setImage(file);
 
     const previewUrl = URL.createObjectURL(file);
 
@@ -296,6 +344,18 @@ const DetailsBar = () => {
 
       phone: phone || undefined,
     };
+
+    if (image) {
+      const extension = getImageExtension(image);
+
+      const pathname = `canvas/${canvas?.id}/nodes/profile-${person.id}.${extension}`;
+      const newBlob = await upload(pathname, image, {
+        access: "public",
+        handleUploadUrl: "/api/avatar/upload",
+      });
+      console.log("uploaded ....");
+      person.imageUrl = newBlob.url;
+    }
 
     await createFirstNode(person);
 
@@ -636,7 +696,7 @@ const DetailsBar = () => {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search nodes..."
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-500/10"
           />
         </div>
 

@@ -5,6 +5,7 @@ import { DataContextProvider } from "@/contexts/DataContextProvider";
 import { ReactFlowProvider } from "@xyflow/react";
 import NavBar from "@/components/NavBar";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthContextProvider } from "@/contexts/AuthContextProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,13 +29,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-full ">
-        <ReactFlowProvider>
-          <DataContextProvider>
-            {" "}
-            <div className=" h-full">{children}</div>
-          </DataContextProvider>
-        </ReactFlowProvider>
-        <Toaster />;
+        <AuthContextProvider>
+          <ReactFlowProvider>
+            <DataContextProvider>
+              <div className=" h-full">{children}</div>
+            </DataContextProvider>
+          </ReactFlowProvider>
+          <Toaster />
+        </AuthContextProvider>
       </body>
     </html>
   );
