@@ -29,14 +29,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-full ">
-        <AuthContextProvider>
+       
           <ReactFlowProvider>
             <DataContextProvider>
               <div className=" h-full">{children}</div>
             </DataContextProvider>
           </ReactFlowProvider>
           <Toaster />
-        </AuthContextProvider>
+       
       </body>
     </html>
   );

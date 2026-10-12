@@ -1,4 +1,5 @@
 "use client";
+
 import DetailsBar from "@/components/DetailsBar";
 import FamilyTree from "@/components/FamilyTree";
 import FamilyTreeExport from "@/components/FamilyTreeExport";
@@ -12,13 +13,13 @@ import FamilyTreeViewContextProvider from "@/contexts/FamilyTreeViewContextProvi
 import { layoutFamilyTree } from "@/lib/elkLayout";
 import { Person } from "@/lib/types";
 import axios from "axios";
-import { useParams, useSearchParams } from "next/navigation";
-import React, { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
 
-const page = () => {
+const Page = () => {
   const searchParams = useSearchParams();
-
   const id = searchParams.get("id");
+
   const {
     nodes,
     edges,
@@ -31,9 +32,21 @@ const page = () => {
     setEdges,
   } = useCanvas();
 
-  useEffect(() => {
-    getCanvas();
-  }, []);
+  const [unauthorized, setUnauthorized] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const getData = async () => {
+    const response = await axios.get(`/api/canvas/${id}`);
+
+    console.log("node datas:", response.data);
+
+    const { nodes, edges } = await layoutFamilyTree(
+      response.data.familyUnits
+    );
+
+    setNodes(nodes);
+    setEdges(edges);
+  };
 
   const getCanvas = async () => {
     try {
@@ -42,52 +55,69 @@ const page = () => {
       }
 
       const response = await axios.get("/api/canvas", {
-        params: {
-          id,
-        },
+        params: { id },
       });
-      console.log("canvas information : ", response.data);
+
+      console.log("canvas information:", response.data);
       setCanvas(response.data);
 
-      getData();
-    } catch {
-      console.log("unable to load canvas information....");
+      // Await so errors from getData() are caught here too
+      await getData();
+    } catch (error: unknown) {
+      if (
+        axios.isAxiosError(error) &&
+        error.response?.status === 401
+      ) {
+        setUnauthorized(true);
+      } else {
+        console.error("Error fetching canvas:", error);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log("canvas from setter : ", canvas);
-  }, [canvas]);
-
-  const getData = async () => {
-    const reponse = await axios.get(`/api/canvas/${id}`);
-    //     console.log("data getting : ", reponse.data.
-    // familyUnits
-    // );
-    console.log("node datas : ", reponse.data);
-
-    const { nodes, edges } = await layoutFamilyTree(reponse.data.familyUnits);
-    setNodes(nodes);
-    setEdges(edges);
-  };
+    getCanvas();
+  }, [id]);
 
   useEffect(() => {
-    console.log("nodes : ", nodes);
-  });
+    console.log("canvas from setter:", canvas);
+  }, [canvas]);
+
+  useEffect(() => {
+    console.log("nodes:", nodes);
+  }, [nodes]);
 
   const handler = (
     sPerson: Person | undefined,
-    setSPerson?: React.Dispatch<React.SetStateAction<Person | undefined>>,
+    setSPerson?: React.Dispatch<
+      React.SetStateAction<Person | undefined>
+    >
   ) => {
     setSelectedPerson(sPerson);
     setSelectedPersonRef.current = setSPerson;
   };
 
   useEffect(() => {
-    console.log("canvas slected :", selectedPerson);
+    console.log("canvas selected:", selectedPerson);
   }, [selectedPerson]);
+
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
+  if (unauthorized) {
+    return (
+      <div className="p-6 text-center">
+        <h1 className="text-2xl font-bold">Unauthorized</h1>
+        <p>You are not authorized to access this resource.</p>
+      </div>
+    );
+  }
+
   return (
-    <main className=" flex-1 flex flex-col lg:flex-row min-h-0 min-w-0">
+    <main className="flex-1 flex flex-col lg:flex-row min-h-0 min-w-0">
       <FamilyTreeViewContextProvider>
         <FamilyTreeView
           nodesParam={nodes}
@@ -102,4 +132,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;

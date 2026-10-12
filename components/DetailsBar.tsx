@@ -226,7 +226,7 @@ const DetailsBar = () => {
    */
 
   useEffect(() => {
-    setIsEditing(false);
+    // setIsEditing(false);
 
     setProfilePreview(selectedPerson?.imageUrl || null);
 

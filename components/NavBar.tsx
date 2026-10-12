@@ -1,5 +1,6 @@
 "use client";
 
+import Switch from "react-switch";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Download,
@@ -14,40 +15,55 @@ import {
   CheckCircle2,
   AlertCircle,
   Save,
-  LoaderPinwheel,
 } from "lucide-react";
 
-import { useData } from "@/contexts/DataContextProvider";
-import { exportFamilyTree } from "@/lib/exportFamilyTree";
 import { useCanvas } from "@/contexts/CanvasContextProvider";
+import { exportFamilyTree } from "@/lib/exportFamilyTree";
 import { saveFamilyTree } from "@/lib/save";
 import { toast } from "sonner";
+import { Canvas } from "@/lib/types";
+import axios from "axios";
 
 const NavBar = () => {
-  const { nodes, edges, setNodes, setEdges, canvas } = useCanvas();
+  const {
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    canvas,
+    setCanvas,
+    isPublic,
+    setIsPublic,
+  } = useCanvas();
 
   const [exporting, setExporting] = useState(false);
-
   const [importing, setImporting] = useState(false);
-
   const [exportOpen, setExportOpen] = useState(false);
+  const [canvasName, setCanvasName] = useState("");
 
   const [importMessage, setImportMessage] = useState<
     "success" | "error" | null
   >(null);
-
   const [messageText, setMessageText] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
-  /*
-   * =========================================================
-   * CLOSE EXPORT MENU WHEN CLICKING OUTSIDE
-   * =========================================================
-   */
+  useEffect(() => {
+    if (canvas) {
+      setCanvasName(canvas.name ?? "untitled");
+    }
+    
+  }, [canvas]);
+  useEffect(()=>{
+   
+    // setIsPublic(true)
+    console.log("-----------------------------------------------ispublic ", isPublic, canvas);
+  },[isPublic, canvas])
 
+
+
+  // Close export menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -59,104 +75,77 @@ const NavBar = () => {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  /*
-   * =========================================================
-   * CLEAR IMPORT MESSAGE
-   * =========================================================
-   */
-
+  // Clear import message
   useEffect(() => {
-    if (!importMessage) {
-      return;
-    }
+    if (!importMessage) return;
 
     const timeout = window.setTimeout(() => {
       setImportMessage(null);
       setMessageText("");
     }, 3500);
 
-    return () => {
-      window.clearTimeout(timeout);
-    };
+    return () => window.clearTimeout(timeout);
   }, [importMessage]);
 
-  /*
-   * =========================================================
-   * EXPORT
-   * =========================================================
-   */
-
-  const handleExport = async (format: "png" | "svg" | "pdf" | "json") => {
+  // Export family tree
+  const handleExport = async (
+    format: "png" | "svg" | "pdf" | "json"
+  ) => {
     try {
       setExporting(true);
-
       setExportOpen(false);
-
       await exportFamilyTree(nodes, edges, format);
-    } catch (error:any) {
-      console.error("Export failed:", error.message);
-
+    } catch (error) {
+      console.error("Export failed:", error);
       alert("Failed to export family tree.");
     } finally {
       setExporting(false);
     }
   };
 
+  // Save family tree
   const handleSave = async () => {
     try {
       if (canvas?.id) {
-        await saveFamilyTree(nodes, edges, canvas?.id);
+        const updatedCanvas: Canvas = {
+          ...canvas,
+          name: canvasName,
+          isPublic
+        };
+
+        console.log("update canvas ------------------------------------", updatedCanvas)
+
+        setCanvas(updatedCanvas);
+
+        axios.put(`/api/canvas/${canvas.id}`,{ nodes, canvas })
+        // await saveFamilyTree(nodes, updatedCanvas);
         toast.success("Canvas Saved...");
       }
     } catch (error) {
-      console.error("Saving failed : ", error);
+      console.error("Saving failed:", error);
       alert("Failed to save family tree.");
-    } finally {
     }
   };
 
-  /*
-   * =========================================================
-   * OPEN IMPORT FILE PICKER
-   * =========================================================
-   */
-
+  // Open import file picker
   const handleOpenImport = () => {
-    if (importing || exporting) {
-      return;
-    }
-
+    if (importing || exporting) return;
     fileInputRef.current?.click();
   };
 
-  /*
-   * =========================================================
-   * IMPORT JSON
-   * =========================================================
-   */
-
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Import JSON family tree
+  const handleImport = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
 
-    /*
-     * Reset input value so the same file can be selected again.
-     */
-
+    // Allow selecting the same file again
     event.target.value = "";
 
-    if (!file) {
-      return;
-    }
-
-    /*
-     * Make sure the selected file is JSON.
-     */
+    if (!file) return;
 
     const isJsonFile =
       file.type === "application/json" ||
@@ -164,18 +153,12 @@ const NavBar = () => {
 
     if (!isJsonFile) {
       setImportMessage("error");
-
       setMessageText("Please select a valid JSON family tree file.");
-
       return;
     }
 
     try {
       setImporting(true);
-
-      /*
-       * Read the file.
-       */
 
       const text = await file.text();
 
@@ -183,24 +166,7 @@ const NavBar = () => {
         throw new Error("The selected JSON file is empty.");
       }
 
-      /*
-       * Parse JSON.
-       */
-
       const parsed = JSON.parse(text);
-
-      /*
-       * =======================================================
-       * VALIDATE IMPORTED DATA
-       * =======================================================
-       *
-       * Your export format is expected to look like:
-       *
-       * {
-       *   nodes: [...],
-       *   edges: [...]
-       * }
-       */
 
       if (
         !parsed ||
@@ -211,18 +177,12 @@ const NavBar = () => {
         throw new Error("Invalid family tree JSON format.");
       }
 
-      /*
-       * Basic node validation.
-       */
-
+      // Validate nodes
       const invalidNode = parsed.nodes.some((node: unknown) => {
-        if (!node || typeof node !== "object") {
-          return true;
-        }
+        if (!node || typeof node !== "object") return true;
 
         const currentNode = node as {
           id?: unknown;
-          type?: unknown;
           data?: unknown;
         };
 
@@ -235,18 +195,13 @@ const NavBar = () => {
 
       if (invalidNode) {
         throw new Error(
-          "The imported file contains invalid family tree nodes.",
+          "The imported file contains invalid family tree nodes."
         );
       }
 
-      /*
-       * Basic edge validation.
-       */
-
+      // Validate edges
       const invalidEdge = parsed.edges.some((edge: unknown) => {
-        if (!edge || typeof edge !== "object") {
-          return true;
-        }
+        if (!edge || typeof edge !== "object") return true;
 
         const currentEdge = edge as {
           id?: unknown;
@@ -263,54 +218,32 @@ const NavBar = () => {
 
       if (invalidEdge) {
         throw new Error(
-          "The imported file contains invalid family tree connections.",
+          "The imported file contains invalid family tree connections."
         );
       }
 
-      /*
-       * =======================================================
-       * CONFIRM REPLACEMENT
-       * =======================================================
-       *
-       * Do not silently destroy the current tree.
-       */
-
+      // Confirm replacement
       if (nodes.length > 0) {
         const confirmed = window.confirm(
-          "Importing this family tree will replace your current tree. Do you want to continue?",
+          "Importing this family tree will replace your current tree. Do you want to continue?"
         );
 
-        if (!confirmed) {
-          return;
-        }
+        if (!confirmed) return;
       }
 
-      /*
-       * =======================================================
-       * UPDATE REACT FLOW
-       * =======================================================
-       */
-
       setNodes(parsed.nodes);
-
       setEdges(parsed.edges);
 
-      /*
-       * =======================================================
-       * SUCCESS MESSAGE
-       * =======================================================
-       */
-
       setImportMessage("success");
-
       setMessageText(
         `Family tree imported successfully${
-          parsed.nodes.length ? ` with ${parsed.nodes.length} nodes` : ""
-        }.`,
+          parsed.nodes.length
+            ? ` with ${parsed.nodes.length} nodes`
+            : ""
+        }.`
       );
     } catch (error) {
       console.error("Import failed:", error);
-
       setImportMessage("error");
 
       if (error instanceof SyntaxError) {
@@ -325,343 +258,386 @@ const NavBar = () => {
     }
   };
 
-  /*-----------------------------------------------------
-      | SAVE CURRENT STATE IN DB(NEO4J)
-   ------------------------------------------------------   
-   */
-
   return (
     <header
       className="
-        relative
-        z-50
-        flex
-        h-[68px]
-        shrink-0
-        items-center
-        justify-between
-        border-b
-        border-slate-200
-        bg-white
-        px-5
-        shadow-sm
+        relative z-50 w-full shrink-0
+        border-b border-slate-200 bg-white shadow-sm
+        flex flex-col gap-2.5 px-3 py-2.5
+        sm:flex-row sm:items-center sm:justify-between
+        sm:gap-3 sm:px-4 sm:py-0 sm:h-[68px]
+        lg:px-5
       "
     >
-      {/* =====================================================
-          BRAND
-      ====================================================== */}
-
-      <div className="flex min-w-0 items-center gap-3">
-        {/* Logo */}
-
-        <div
-          className="
-            flex
-            h-10
-            w-10
-            shrink-0
-            items-center
-            justify-center
-            rounded-xl
-            bg-blue-600
-            text-white
-            shadow-sm
-            shadow-blue-200
-          "
-        >
-          <TreePalmIcon size={21} strokeWidth={2} />
-        </div>
-
-        {/* Brand text */}
-
-        <div className="min-w-0">
-          <h1
+      {/* 
+        Mobile Row 1 & Desktop Left Side: Brand Logo and Name
+      */}
+      <div
+        className="
+          flex w-full min-w-0 items-center justify-between
+          sm:w-auto sm:shrink-0
+        "
+      >
+        {/* Brand */}
+        <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
+          <div
             className="
-              truncate
-              text-sm
-              font-bold
-              tracking-tight
-              text-slate-900
+              flex h-9 w-9 shrink-0 items-center justify-center
+              rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-200
+              sm:h-10 sm:w-10
             "
           >
-            Family Tree
-          </h1>
+            <TreePalmIcon size={21} strokeWidth={2} />
+          </div>
 
-          <p
-            className="
-              hidden
-              text-[11px]
-              font-medium
-              text-slate-400
-              sm:block
-            "
-          >
-            Family tree visualization
-          </p>
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-bold tracking-tight text-slate-900">
+              Family Tree
+            </h1>
+            <p className="hidden text-[11px] font-medium text-slate-400 md:block">
+              Family tree visualization
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* =====================================================
-          ACTIONS
-      ====================================================== */}
+        {/* 
+          Mobile Row 1 Right Side: Import & Export buttons 
+          (Hidden on desktop since desktop has them at the far end)
+        */}
+        <div className="flex shrink-0 items-center gap-1.5 sm:hidden">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={handleImport}
+          />
 
-      <div className="flex items-center gap-2">
-        <button
-          className={`
-            inline-flex
-            h-9
-            items-center
-            gap-2
-            rounded-lg
-            border
-            border-slate-200
-            bg-white
-            px-3
-            text-xs
-            font-semibold
-            text-slate-700
-            shadow-sm
-            transition-all
-            hover:border-slate-300
-            hover:bg-slate-50
-            hover:text-slate-900
-            active:scale-[0.98]
-            disabled:cursor-not-allowed
-            disabled:opacity-50
-            
-          `}
-          onClick={handleSave}
-        >
-          {/* {saving ? <LoaderPinwheel className="animate-spin " /> : <Save />} */}
-          <Save />
-
-          {/* {saving ? <p>Saving</p> : <p>save</p>} */}
-        </button>
-        {/* Hidden JSON file input */}
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json,application/json"
-          className="hidden"
-          onChange={handleImport}
-        />
-
-        {/* ===================================================
-            IMPORT
-        ==================================================== */}
-
-        <button
-          type="button"
-          disabled={importing || exporting}
-          onClick={handleOpenImport}
-          className="
-            inline-flex
-            h-9
-            items-center
-            gap-2
-            rounded-lg
-            border
-            border-slate-200
-            bg-white
-            px-3
-            text-xs
-            font-semibold
-            text-slate-700
-            shadow-sm
-            transition-all
-            hover:border-slate-300
-            hover:bg-slate-50
-            hover:text-slate-900
-            active:scale-[0.98]
-            disabled:cursor-not-allowed
-            disabled:opacity-50
-          "
-        >
-          {importing ? (
-            <span
-              className="
-                h-3.5
-                w-3.5
-                animate-spin
-                rounded-full
-                border-2
-                border-slate-300
-                border-t-blue-600
-              "
-            />
-          ) : (
-            <Download size={15} strokeWidth={2} />
-          )}
-
-          <span>{importing ? "Importing..." : "Import"}</span>
-        </button>
-
-        {/* ===================================================
-            EXPORT
-        ==================================================== */}
-
-        <div ref={exportMenuRef} className="relative">
+          {/* Import */}
           <button
             type="button"
-            disabled={exporting || importing}
-            onClick={() => setExportOpen((prev) => !prev)}
+            disabled={importing || exporting}
+            onClick={handleOpenImport}
             className="
-              inline-flex
-              h-9
-              items-center
-              gap-2
-              rounded-lg
-              bg-blue-600
-              px-3.5
-              text-xs
-              font-semibold
-              text-white
-              shadow-sm
-              shadow-blue-200
-              transition-all
-              hover:bg-blue-700
+              inline-flex h-9 shrink-0 items-center justify-center gap-1
+              rounded-lg border border-slate-200 bg-white px-2
+              text-[11px] font-semibold text-slate-700 shadow-sm
+              transition-all hover:border-slate-300 hover:bg-slate-50
               active:scale-[0.98]
-              disabled:cursor-not-allowed
-              disabled:opacity-50
+              disabled:cursor-not-allowed disabled:opacity-50
             "
           >
-            {exporting ? (
-              <span
-                className="
-                  h-3.5
-                  w-3.5
-                  animate-spin
-                  rounded-full
-                  border-2
-                  border-white/40
-                  border-t-white
-                "
-              />
+            {importing ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
             ) : (
-              <Upload size={15} strokeWidth={2} />
+              <Download size={14} />
             )}
-
-            <span>{exporting ? "Exporting..." : "Export"}</span>
-
-            {!exporting && (
-              <ChevronDown
-                size={14}
-                className={`
-                  transition-transform
-                  duration-200
-                  ${exportOpen ? "rotate-180" : ""}
-                `}
-              />
-            )}
+            <span>{importing ? "Importing" : "Import"}</span>
           </button>
 
-          {/* =================================================
-              EXPORT MENU
-          ================================================== */}
-
-          {exportOpen && !exporting && (
-            <div
+          {/* Export */}
+          <div ref={exportMenuRef} className="relative shrink-0">
+            <button
+              type="button"
+              disabled={exporting || importing}
+              onClick={() => setExportOpen((prev) => !prev)}
               className="
-                absolute
-                right-0
-                top-11
-                z-50
-                w-52
-                overflow-hidden
-                rounded-xl
-                border
-                border-slate-200
-                bg-white
-                p-1.5
-                shadow-xl
-                shadow-slate-900/10
+                inline-flex h-9 shrink-0 items-center justify-center gap-1
+                rounded-lg bg-blue-600 px-2
+                text-[11px] font-semibold text-white
+                shadow-sm shadow-blue-200 transition-all
+                hover:bg-blue-700 active:scale-[0.98]
+                disabled:cursor-not-allowed disabled:opacity-50
               "
             >
-              {/* Menu header */}
+              {exporting ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              ) : (
+                <Upload size={14} />
+              )}
+              <span>{exporting ? "Exporting" : "Export"}</span>
+              {!exporting && (
+                <ChevronDown
+                  size={12}
+                  className={`transition-transform duration-200 ${
+                    exportOpen ? "rotate-180" : ""
+                  }`}
+                />
+              )}
+            </button>
 
-              <div className="px-2.5 pb-2 pt-1.5">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                  Export family tree
-                </p>
+            {/* Export dropdown */}
+            {exportOpen && !exporting && (
+              <div
+                className="
+                  absolute right-0 top-10 z-50
+                  w-52 max-w-[calc(100vw-1rem)]
+                  overflow-hidden rounded-xl border border-slate-200
+                  bg-white p-1.5 shadow-xl shadow-slate-900/10
+                "
+              >
+                <div className="px-2.5 pb-2 pt-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Export family tree
+                  </p>
+                </div>
+
+                <ExportOption
+                  icon={<FileImage size={16} />}
+                  label="PNG"
+                  description="High-quality image"
+                  onClick={() => handleExport("png")}
+                />
+                <ExportOption
+                  icon={<FileCode2 size={16} />}
+                  label="SVG"
+                  description="Scalable vector image"
+                  onClick={() => handleExport("svg")}
+                />
+                <ExportOption
+                  icon={<FileText size={16} />}
+                  label="PDF"
+                  description="Printable document"
+                  onClick={() => handleExport("pdf")}
+                />
+
+                <div className="my-1 border-t border-slate-100" />
+
+                <ExportOption
+                  icon={<Braces size={16} />}
+                  label="JSON"
+                  description="Family tree data"
+                  onClick={() => handleExport("json")}
+                />
               </div>
-
-              <ExportOption
-                icon={<FileImage size={16} />}
-                label="PNG"
-                description="High-quality image"
-                onClick={() => handleExport("png")}
-              />
-
-              <ExportOption
-                icon={<FileCode2 size={16} />}
-                label="SVG"
-                description="Scalable vector image"
-                onClick={() => handleExport("svg")}
-              />
-
-              <ExportOption
-                icon={<FileText size={16} />}
-                label="PDF"
-                description="Printable document"
-                onClick={() => handleExport("pdf")}
-              />
-
-              <div className="my-1 border-t border-slate-100" />
-
-              <ExportOption
-                icon={<Braces size={16} />}
-                label="JSON"
-                description="Family tree data"
-                onClick={() => handleExport("json")}
-              />
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* =====================================================
-          IMPORT STATUS MESSAGE
-      ====================================================== */}
+      {/* 
+        Desktop Right Side Controls Group (Public toggle, Canvas Name input, Save button, Import, Export):
+        Pushed to the far end on laptop/desktop screens.
+      */}
+      <div
+        className="
+          hidden sm:flex items-center gap-3 shrink-0
+        "
+      >
+        {/* Public toggle */}
+        <label className="flex shrink-0 items-center gap-2 text-xs font-medium text-slate-600">
+          <span>Public</span>
+          <Switch checked={isPublic} onChange={setIsPublic} />
+        </label>
 
-      {importMessage && (
-        <div
+        {/* Canvas name */}
+        <input
+          type="text"
+          value={canvasName}
+          onChange={(event) => setCanvasName(event.target.value)}
+          aria-label="Canvas name"
           className="
-            absolute
-            right-5
-            top-[76px]
-            z-50
-            flex
-            max-w-[340px]
-            items-start
-            gap-3
-            rounded-xl
-            border
-            bg-white
-            px-3.5
-            py-3
-            shadow-lg
-            shadow-slate-900/10
+            h-9 min-w-0 rounded-md
+            border border-slate-200 bg-white px-2.5
+            text-sm text-slate-700 outline-none transition
+            focus:border-blue-500 focus:ring-2 focus:ring-blue-100
+            sm:w-28 md:w-36 lg:w-44 xl:w-48
+          "
+        />
+
+        {/* Save */}
+        <button
+          type="button"
+          aria-label="Save canvas"
+          title="Save canvas"
+          onClick={handleSave}
+          className="
+            inline-flex h-9 w-9 shrink-0 items-center justify-center
+            rounded-lg border border-slate-200 bg-white
+            text-slate-700 shadow-sm transition
+            hover:bg-slate-50 active:scale-[0.98]
           "
         >
-          {/* Status icon */}
+          <Save size={16} />
+        </button>
 
+        {/* Import & Export buttons for Desktop */}
+        <div className="flex shrink-0 items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={handleImport}
+          />
+
+          {/* Import */}
+          <button
+            type="button"
+            disabled={importing || exporting}
+            onClick={handleOpenImport}
+            className="
+              inline-flex h-9 shrink-0 items-center justify-center gap-2
+              rounded-lg border border-slate-200 bg-white px-3
+              text-xs font-semibold text-slate-700 shadow-sm
+              transition-all hover:border-slate-300 hover:bg-slate-50
+              active:scale-[0.98]
+              disabled:cursor-not-allowed disabled:opacity-50
+            "
+          >
+            {importing ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+            ) : (
+              <Download size={15} />
+            )}
+            <span>{importing ? "Importing" : "Import"}</span>
+          </button>
+
+          {/* Export */}
+          <div ref={exportMenuRef} className="relative shrink-0">
+            <button
+              type="button"
+              disabled={exporting || importing}
+              onClick={() => setExportOpen((prev) => !prev)}
+              className="
+                inline-flex h-9 shrink-0 items-center justify-center gap-2
+                rounded-lg bg-blue-600 px-3.5
+                text-xs font-semibold text-white
+                shadow-sm shadow-blue-200 transition-all
+                hover:bg-blue-700 active:scale-[0.98]
+                disabled:cursor-not-allowed disabled:opacity-50
+              "
+            >
+              {exporting ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              ) : (
+                <Upload size={15} />
+              )}
+              <span>{exporting ? "Exporting" : "Export"}</span>
+
+              {!exporting && (
+                <ChevronDown
+                  size={14}
+                  className={`transition-transform duration-200 ${
+                    exportOpen ? "rotate-180" : ""
+                  }`}
+                />
+              )}
+            </button>
+
+            {/* Export dropdown */}
+            {exportOpen && !exporting && (
+              <div
+                className="
+                  absolute right-0 top-11 z-50
+                  w-52 max-w-[calc(100vw-1rem)]
+                  overflow-hidden rounded-xl border border-slate-200
+                  bg-white p-1.5 shadow-xl shadow-slate-900/10
+                "
+              >
+                <div className="px-2.5 pb-2 pt-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Export family tree
+                  </p>
+                </div>
+
+                <ExportOption
+                  icon={<FileImage size={16} />}
+                  label="PNG"
+                  description="High-quality image"
+                  onClick={() => handleExport("png")}
+                />
+                <ExportOption
+                  icon={<FileCode2 size={16} />}
+                  label="SVG"
+                  description="Scalable vector image"
+                  onClick={() => handleExport("svg")}
+                />
+                <ExportOption
+                  icon={<FileText size={16} />}
+                  label="PDF"
+                  description="Printable document"
+                  onClick={() => handleExport("pdf")}
+                />
+
+                <div className="my-1 border-t border-slate-100" />
+
+                <ExportOption
+                  icon={<Braces size={16} />}
+                  label="JSON"
+                  description="Family tree data"
+                  onClick={() => handleExport("json")}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 
+        Mobile Row 2: Public toggle, Canvas name input, Save button
+      */}
+      <div
+        className="
+          flex w-full min-w-0 items-center gap-2 pt-1 border-t border-slate-100
+          sm:hidden
+        "
+      >
+        {/* Public toggle */}
+        <label className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600">
+          <span>Public</span>
+          <Switch checked={isPublic} onChange={setIsPublic} />
+        </label>
+
+        {/* Canvas name */}
+        <input
+          type="text"
+          value={canvasName}
+          onChange={(event) => setCanvasName(event.target.value)}
+          aria-label="Canvas name"
+          className="
+            h-9 min-w-0 flex-1 rounded-md
+            border border-slate-200 bg-white px-2
+            text-sm text-slate-700 outline-none transition
+            focus:border-blue-500 focus:ring-2 focus:ring-blue-100
+          "
+        />
+
+        {/* Save */}
+        <button
+          type="button"
+          aria-label="Save canvas"
+          title="Save canvas"
+          onClick={handleSave}
+          className="
+            inline-flex h-9 w-9 shrink-0 items-center justify-center
+            rounded-lg border border-slate-200 bg-white
+            text-slate-700 shadow-sm transition
+            hover:bg-slate-50 active:scale-[0.98]
+          "
+        >
+          <Save size={16} />
+        </button>
+      </div>
+
+      {/* Import status message */}
+      {importMessage && (
+        <div
+          role="status"
+          className="
+            absolute right-2 top-full z-50 mt-2
+            flex w-[calc(100vw-1rem)] max-w-[340px]
+            items-start gap-3 rounded-xl border border-slate-200
+            bg-white px-3.5 py-3 shadow-lg shadow-slate-900/10
+            sm:right-5
+          "
+        >
           <div
-            className={`
-              mt-0.5
-              flex
-              h-7
-              w-7
-              shrink-0
-              items-center
-              justify-center
-              rounded-lg
-              ${
-                importMessage === "success"
-                  ? "bg-emerald-50 text-emerald-600"
-                  : "bg-red-50 text-red-600"
-              }
-            `}
+            className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+              importMessage === "success"
+                ? "bg-emerald-50 text-emerald-600"
+                : "bg-red-50 text-red-600"
+            }`}
           >
             {importMessage === "success" ? (
               <CheckCircle2 size={16} />
@@ -670,21 +646,16 @@ const NavBar = () => {
             )}
           </div>
 
-          {/* Message */}
-
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-slate-800">
               {importMessage === "success"
                 ? "Import successful"
                 : "Import failed"}
             </p>
-
-            <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
+            <p className="mt-0.5 break-words text-[11px] leading-4 text-slate-500">
               {messageText}
             </p>
           </div>
-
-          {/* Close */}
 
           <button
             type="button"
@@ -693,17 +664,9 @@ const NavBar = () => {
               setMessageText("");
             }}
             className="
-              flex
-              h-6
-              w-6
-              shrink-0
-              items-center
-              justify-center
-              rounded-md
-              text-slate-400
-              transition
-              hover:bg-slate-100
-              hover:text-slate-600
+              flex h-6 w-6 shrink-0 items-center justify-center
+              rounded-md text-slate-400 transition
+              hover:bg-slate-100 hover:text-slate-600
             "
             aria-label="Close message"
           >
@@ -714,12 +677,6 @@ const NavBar = () => {
     </header>
   );
 };
-
-/*
- * =========================================================
- * EXPORT OPTION
- * =========================================================
- */
 
 const ExportOption = ({
   icon,
@@ -737,45 +694,23 @@ const ExportOption = ({
       type="button"
       onClick={onClick}
       className="
-        group
-        flex
-        w-full
-        items-center
-        gap-3
-        rounded-lg
-        px-2.5
-        py-2.5
-        text-left
-        transition-all
-        hover:bg-slate-50
+        group flex w-full items-center gap-3
+        rounded-lg px-2.5 py-2.5 text-left
+        transition-all hover:bg-slate-50
       "
     >
-      {/* Icon */}
-
       <div
         className="
-          flex
-          h-8
-          w-8
-          shrink-0
-          items-center
-          justify-center
-          rounded-lg
-          bg-slate-100
-          text-slate-500
-          transition
-          group-hover:bg-blue-50
-          group-hover:text-blue-600
+          flex h-8 w-8 shrink-0 items-center justify-center
+          rounded-lg bg-slate-100 text-slate-500
+          transition group-hover:bg-blue-50 group-hover:text-blue-600
         "
       >
         {icon}
       </div>
 
-      {/* Text */}
-
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold text-slate-800">{label}</p>
-
         <p className="mt-0.5 truncate text-[10px] text-slate-400">
           {description}
         </p>

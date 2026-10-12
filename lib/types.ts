@@ -24,8 +24,9 @@ export interface FamilyUnit {
 }
 
 export interface User {
+  createdAt: string,
   id: string;
-  userName: string;
+  name: string;
   email: string;
 }
 
@@ -34,6 +35,7 @@ export interface Canvas {
   name?: string;
   ownerId: string;
   createdAt: string;
+  isPublic?: boolean;
 }
 
 export interface Relationship {

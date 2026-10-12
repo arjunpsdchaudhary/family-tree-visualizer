@@ -1,17 +1,18 @@
 import { Edge, Node } from "@xyflow/react";
-import { Person, Relationship } from "./types";
+import { Canvas, Person, Relationship } from "./types";
 import { driver } from "@/lib/neo4j";
 
 type UnitIdToPersonIdType = {
   unitId: string;
   personId: string;
 };
+
 export const saveFamilyTree = async (
   nodes: Node[],
-  edges: Edge[],
-  canvasId: string,
+  canvas: Canvas,
 ) => {
   const session = driver.session();
+
   const Person: Person[] = [];
   const Relationship: Relationship[] = [];
 
@@ -19,11 +20,17 @@ export const saveFamilyTree = async (
 
   const unitId_to_personId: UnitIdToPersonIdType[] = [];
 
+  // --------------------------------------------------
+  // Get all child unit IDs
+  // --------------------------------------------------
+
   nodes.map((node) => {
-    childrensUnitId.push(...(node.data.childUnitIds as string));
-    // unitId_to_personId;
-    // node.data.childUnitIds.map((childId) => {});
+    childrensUnitId.push(...(node.data.childUnitIds as string[]));
   });
+
+  // --------------------------------------------------
+  // Map child unit IDs to person IDs
+  // --------------------------------------------------
 
   nodes.map((node) => {
     childrensUnitId.map((unitId) => {
@@ -32,17 +39,25 @@ export const saveFamilyTree = async (
           unitId: unitId,
           personId: (node.data.person as Person).id,
         });
+
         return;
       }
     });
   });
 
+  // --------------------------------------------------
+  // Build persons and relationships
+  // --------------------------------------------------
+
   nodes.map((node) => {
     const person: Person = node.data.person as Person;
     const spouse = node.data.spouse as Person;
+
     Person.push(person);
+
     if (spouse) {
       Person.push(spouse);
+
       Relationship.push({
         from: person.id,
         to: spouse.id,
@@ -50,7 +65,7 @@ export const saveFamilyTree = async (
       });
     }
 
-    (node.data.childUnitIds as []).map((unitId: string) => {
+    (node.data.childUnitIds as string[]).map((unitId: string) => {
       unitId_to_personId.map((item) => {
         if (item.unitId === unitId) {
           Relationship.push({
@@ -58,6 +73,7 @@ export const saveFamilyTree = async (
             to: item.personId,
             label: "CHILD",
           });
+
           if (spouse) {
             Relationship.push({
               from: spouse.id,
@@ -73,14 +89,23 @@ export const saveFamilyTree = async (
   try {
     await session.executeWrite(async (tx) => {
       // --------------------------------------------------
-      // 1. Create canvas if it doesn't exist
+      // 1. Create/update canvas
+      // --------------------------------------------------
+      // Only the name is updated.
+      // ownerId and createdAt remain untouched.
       // --------------------------------------------------
 
       await tx.run(
         `
         MERGE (c:Canvas {id: $canvasId})
+        SET c.name = $canvasName,
+            c.isPublic = $isPublic
         `,
-        { canvasId },
+        {
+          canvasId: canvas.id,
+          canvasName: canvas.name,
+          isPublic : canvas.isPublic
+        },
       );
 
       // --------------------------------------------------
@@ -96,7 +121,7 @@ export const saveFamilyTree = async (
         DETACH DELETE p
         `,
         {
-          canvasId,
+          canvasId: canvas.id,
           personIds: Person.map((p) => p.id),
         },
       );
@@ -120,7 +145,7 @@ export const saveFamilyTree = async (
         MERGE (p)-[:IN]->(c)
         `,
         {
-          canvasId,
+          canvasId: canvas.id,
           persons: Person,
         },
       );
@@ -132,18 +157,19 @@ export const saveFamilyTree = async (
       await tx.run(
         `
         MATCH (a:Person)-[r:SPOUSE|CHILD]->(b:Person)
+
         MATCH (a)-[:IN]->(:Canvas {id: $canvasId})
         MATCH (b)-[:IN]->(:Canvas {id: $canvasId})
 
         DELETE r
         `,
         {
-          canvasId,
+          canvasId: canvas.id,
         },
       );
 
       // --------------------------------------------------
-      // 5. Re-create relationships from JSON
+      // 5. Separate relationships
       // --------------------------------------------------
 
       const spouseRelationships = Relationship.filter(
@@ -154,7 +180,10 @@ export const saveFamilyTree = async (
         (r) => r.label === "CHILD",
       );
 
-      // SPOUSE
+      // --------------------------------------------------
+      // 6. Re-create SPOUSE relationships
+      // --------------------------------------------------
+
       await tx.run(
         `
         UNWIND $relationships AS rel
@@ -168,12 +197,15 @@ export const saveFamilyTree = async (
         MERGE (from)-[:SPOUSE]->(to)
         `,
         {
-          canvasId,
+          canvasId: canvas.id,
           relationships: spouseRelationships,
         },
       );
 
-      // CHILD
+      // --------------------------------------------------
+      // 7. Re-create CHILD relationships
+      // --------------------------------------------------
+
       await tx.run(
         `
         UNWIND $relationships AS rel
@@ -187,7 +219,7 @@ export const saveFamilyTree = async (
         MERGE (from)-[:CHILD]->(to)
         `,
         {
-          canvasId,
+          canvasId: canvas.id,
           relationships: childRelationships,
         },
       );
@@ -195,7 +227,4 @@ export const saveFamilyTree = async (
   } finally {
     await session.close();
   }
-
-  //   console.log("persons are here :", Person);
-  //   console.log("relationship are here : ", Relationship);
 };

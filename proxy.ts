@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 
-export function proxy(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
-  console.log("Method:", request.url);
-  console.log("Path:", request.nextUrl.pathname);
+export async function proxy(request: NextRequest) {
+    const session = await auth.api.getSession({
+        headers: await headers()
+    })
 
-  if (pathname === "/signup") {
-    NextResponse.redirect(new URL("/signin", request.url));
-  }
-  return NextResponse.next();
+    if(!session) {
+        return NextResponse.redirect(new URL("/sign-in", request.url));
+    }
+
+    return NextResponse.next();
 }
+
+export const config = {
+  matcher: ["/dashboard"], // Specify the routes the middleware applies to
+};

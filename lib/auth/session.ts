@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { createToken, PasetoPayload, verifyToken } from "./auth";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import {user as users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { User } from "../types";
 import { decrypt } from "paseto-ts/v4";
@@ -59,7 +59,7 @@ export async function getCurrentUser(): Promise<User | null> {
 
     return {
       id: user[0].id,
-      userName: user[0].userName,
+      userName: user[0].name,
       email: user[0].email,
     };
   } catch {

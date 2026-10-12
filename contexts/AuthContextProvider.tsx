@@ -1,4 +1,5 @@
 "use client";
+import { authClient } from "@/lib/auth-client";
 import { User } from "@/lib/types";
 import axios from "axios";
 import {
@@ -19,6 +20,17 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
+
+  const { data: session, isPending, error } =  authClient.useSession();
+
+  useEffect(() => {
+    if (session) {
+      console.log("user data------------------", session.user);
+    } else if (error) {
+      console.log("unable to find any user", error);
+    }
+  }, [session, error]);
+
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -30,9 +42,12 @@ export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
 
   async function getUser() {
     try {
-      const response = await axios.get("/api/me");
-      setUser(response.data.user);
-      console.log("user from context :", response.data.user, "user :", user);
+      // console.log("finding users.......")
+      // const { data: session, isPending, error } =  authClient.useSession();
+      // console.log("user data------------------", session?.user.email)
+      // const response = await axios.get("/api/me");
+      // setUser(response.data.user);
+      // console.log("user from context :", response.data.user, "user :", user);
     } catch (error) {
       console.log("unable to find any user");
     }

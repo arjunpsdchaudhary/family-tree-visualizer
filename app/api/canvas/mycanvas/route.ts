@@ -1,36 +1,37 @@
-import { getCurrentUser } from "@/lib/auth/session";
+import { auth } from "@/lib/auth";
 import { driver } from "@/lib/neo4j";
+import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
-  const session = driver.session();
+  const db_session = driver.session();
 
   try {
-    const user = await getCurrentUser();
+   // 1. Validate the session automatically using Better Auth & incoming headers
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
 
-    if (!user) {
+    // 2. Authorization Check: If no session exists, reject immediately
+    if (!session) {
       return NextResponse.json(
-        {
-          message: "Invalid or expired token",
-          success: false,
-          authenticated: false,
-        },
-        { status: 401 },
+        { error: "Unauthorized: Please log in" },
+        { status: 401 }
       );
     }
-    console.log(
-      "------------------------------------------------------------------------------",
-    );
-    console.log("owner id :", user.id);
 
-    const result = await session.run(
+    // 3. Extract the verified user ID from the session
+    const userId = session.user.id;
+
+
+    const result = await db_session.run(
       `
         MATCH (c:Canvas {ownerId: $ownerId})
         RETURN c
         LIMIT 25
       `,
       {
-        ownerId: user.id,
+        ownerId: userId,
       },
     );
 
@@ -57,6 +58,6 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   } finally {
-    await session.close();
+    await db_session.close();
   }
 }

@@ -6,22 +6,36 @@ import { FormEvent, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
+
+
 
 export default function SignInPage() {
-  const [email, setEmail] = useState<string>();
-  const [password, setPassword] = useState<string>();
+  const [email, setEmail] = useState<string>(" ");
+  const [password, setPassword] = useState<string>("");
   const router = useRouter();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     try {
-      console.log("hello");
-      const data = { email, password };
 
-      const response = await axios.post("/api/signin", data);
-      toast.success(response.data.message);
-      router.push("/dashboard");
+      const { data, error } = await authClient.signIn.email({
+      email,
+      password,
+    });
+
+    if(!error){
+      console.log("signin successful-------------------", data)
+
+    }
+      
+      // const data = { email, password };
+
+
+      // const response = await axios.post("/api/signin", data);
+      // toast.success(response.data.message);
+      // router.push("/dashboard");
     } catch (error: any) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;

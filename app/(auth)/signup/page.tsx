@@ -6,16 +6,26 @@ import { FormEvent, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { authClient, signIn } from "@/lib/auth-client";
+import { signUp } from "@/server/user";
 
 export default function SignUpPage() {
-  const [userName, setUserName] = useState<string>();
-  const [password, setPassword] = useState<string>();
-  const [email, setEmail] = useState<string>();
+  const [userName, setUserName] = useState<string>("");
+  const [password, setPassword] = useState<string>(" ");
+  const [email, setEmail] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
   const passwordMatch =
     confirmPassword?.length <= 1 || password === confirmPassword;
 
   const router = useRouter();
+
+  const handleGoogleSignUp = async () => {
+    await signIn.social({
+      provider: "google",
+      callbackURL: "/dashboard", // Redirect after success
+    });
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -25,15 +35,26 @@ export default function SignUpPage() {
         return;
       }
 
-      const user = {
-        userName,
+      // const response = await axios.post("/api/signup", user);
+
+      // toast.success(response.data.message);
+
+      const { data, error } = await authClient.signUp.email({
         email,
         password,
-      };
-      const response = await axios.post("/api/signup", user);
+        name:userName,
+      });
 
-      toast.success(response.data.message);
-      router.push("/signin");
+      if (error) {
+        
+        console.log(error.message || "Failed to sign up");
+      } else {
+        router.push("/dashboard"); // Redirect to your protected dashboard
+      }
+
+      // const result = await signUp(email, password, userName);
+      // console.log("------------------result ----", result);
+      // router.push("/signin");
     } catch (error: any) {
       console.error("error", error);
     }
@@ -176,6 +197,9 @@ export default function SignUpPage() {
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </button>
           </form>
+      <button onClick={handleGoogleSignUp}>
+      Sign in with Google
+    </button>
 
           {/* Sign in */}
           <p className="mt-6 text-center text-sm text-slate-500">

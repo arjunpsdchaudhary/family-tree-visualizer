@@ -14,6 +14,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContextProvider";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
+
 
 type MyCanvas = {
   id: string;
@@ -21,6 +23,7 @@ type MyCanvas = {
   ownerId: string;
   createdAt: number;
 };
+
 
 type MyCanvasApiResponse =
   | MyCanvas[]
@@ -50,11 +53,19 @@ const publicTrees = [
 ];
 
 export default function DashboardPage() {
+
+  const {data, error, }=  authClient.useSession();
   const [myCanvases, setMyCanvases] = useState<MyCanvas[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const router = useRouter();
+
+  useEffect(()=>{
+    if(!error){
+      console.log("data is here.....",data);
+    }
+  })
 
   // =========================================================
   // FETCH MY CANVASES
@@ -176,7 +187,7 @@ export default function DashboardPage() {
 
             <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xl font-semibold">
-                {user?.userName?.charAt(0).toUpperCase() || "U"}
+                {data?.user?.name?.charAt(0).toUpperCase() || "U"}
               </div>
 
               <span className="hidden text-sm font-medium sm:block">

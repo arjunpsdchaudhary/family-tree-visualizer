@@ -8,6 +8,7 @@ import {
   RefObject,
   SetStateAction,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -39,6 +40,9 @@ type CanvasContextType = {
   canvas: Canvas | null;
   setCanvas: Dispatch<SetStateAction<Canvas | null>>;
 
+  isPublic: boolean
+  setIsPublic: Dispatch<SetStateAction<boolean>>
+
   setSelectedPerson: Dispatch<SetStateAction<Person | undefined>>;
   setSelectedPersonRef: RefObject<
     Dispatch<SetStateAction<Person | undefined>> | undefined
@@ -69,6 +73,15 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
     useRef<Dispatch<SetStateAction<Person | undefined>>>(undefined);
 
   const [canvas, setCanvas] = useState<Canvas | null>(null);
+
+   const [isPublic, setIsPublic] = useState<boolean>(false);
+
+   useEffect(()=>{
+    if(canvas && canvas.isPublic){
+      setIsPublic(canvas.isPublic)
+    }
+
+   }, [canvas])
   //  const handler = (age: number) => {
   //   set
   // };
@@ -812,6 +825,8 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
   return (
     <CanvasContext.Provider
       value={{
+        isPublic,
+        setIsPublic,
         nodes,
         setNodes,
         edges,
