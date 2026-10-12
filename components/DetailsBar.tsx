@@ -260,16 +260,11 @@ const DetailsBar = () => {
       access: "public",
       handleUploadUrl: "/api/avatar/upload",
     });
-    // console.log("uploaded ....");
-    // person.imageUrl = newBlob.url;
+ 
     if (selectedPerson) {
       setSelectedPerson({ ...selectedPerson, imageUrl: newBlob.url });
     }
-    // const uploadUrl = await axios.put(uploadUrl, file, {
-    //   headers: {
-    //     "Content-Type": file.type,
-    //   },
-    // });
+  
 
     const previewUrl = URL.createObjectURL(file);
 
@@ -353,7 +348,6 @@ const DetailsBar = () => {
         access: "public",
         handleUploadUrl: "/api/avatar/upload",
       });
-      console.log("uploaded ....");
       person.imageUrl = newBlob.url;
     }
 

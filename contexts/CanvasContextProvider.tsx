@@ -12,9 +12,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { useFamilyTreeView } from "./FamilyTreeViewContextProvider";
 import { familyUnits } from "@/lib/familyData";
-import { error } from "console";
+
 import { Edge, Node } from "@xyflow/react";
 import { toPng, toSvg } from "html-to-image";
 
@@ -82,42 +81,7 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
     }
 
    }, [canvas])
-  //  const handler = (age: number) => {
-  //   set
-  // };
 
-  //   const { setNodes, setEdges, setSelectedPerson } = useFamilyTreeView();
-
-  // const loadTestFamilyTree = async () => {
-  //   const testUnits: FamilyUnit[] = familyUnits.map((unit) => ({
-  //     ...unit,
-
-  //     person: {
-  //       ...unit.person,
-  //     },
-
-  //     spouse: unit.spouse
-  //       ? {
-  //           ...unit.spouse,
-  //         }
-  //       : undefined,
-
-  //     childUnitIds: [...unit.childUnitIds],
-  //   }));
-
-  //   const result = await layoutFamilyTree(testUnits);
-
-  //   setNodes(result.nodes);
-
-  //   setEdges(result.edges);
-  //   console.log("layouted nodes", result.nodes);
-
-  //   if (testUnits.length > 0) {
-  //     setSelectedPerson({
-  //       ...testUnits[0].person,
-  //     });
-  //   }
-  // };
   const createFirstNode = async (person: Person) => {
     const familyUnitId = `family-${crypto.randomUUID()}`;
 
@@ -759,8 +723,6 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
     const { nodes, edges } = await layoutFamilyTree(familyUnits);
     setNodes(nodes);
     setEdges(edges);
-    console.log(nodes);
-    console.log("fu :", familyUnits[0].person);
     setSelectedPersonRef.current?.({ ...familyUnits[0].person });
   };
 

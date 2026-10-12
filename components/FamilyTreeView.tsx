@@ -48,8 +48,6 @@ const FamilyTreeView = ({
     if (getdata) {
       getdata(selectedPerson, setSelectedPerson);
     }
-
-    console.log("selected person :", selectedPerson?.name);
   }, [selectedPerson]);
 
   return (
@@ -78,12 +76,6 @@ const FamilyTreeView = ({
   );
 };
 
-// const FamilyTreeView = ({}:FamilyTreeViewProps) => {
-//   return (
-//     <FamilyTreeViewContextProvider>
-//       <TreeView familyUnits={familyUnits} />
-//     </FamilyTreeViewContextProvider>
-//   );
-// };
+
 
 export default FamilyTreeView;

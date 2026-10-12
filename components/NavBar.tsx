@@ -55,11 +55,7 @@ const NavBar = () => {
     }
     
   }, [canvas]);
-  useEffect(()=>{
-   
-    // setIsPublic(true)
-    console.log("-----------------------------------------------ispublic ", isPublic, canvas);
-  },[isPublic, canvas])
+
 
 
 
@@ -116,7 +112,6 @@ const NavBar = () => {
           isPublic
         };
 
-        console.log("update canvas ------------------------------------", updatedCanvas)
 
         setCanvas(updatedCanvas);
 

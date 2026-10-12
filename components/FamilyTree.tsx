@@ -23,67 +23,12 @@ import FamilyTreeExport from "./FamilyTreeExport";
 const nodeTypes = { familyUnit: FamilyUnitNode };
 
 const FamilyTree = () => {
-  const { nodes, setNodes, edges, setEdges } = useData();
+  const { nodes, edges } = useData();
 
-  const ToogleNodes = (node: Node) => {
-    console.log("node", node);
 
-    const findChildrenOf = (node: Node) => {
-      edges
-        .filter((edge) => edge.source === node.id)
-        .forEach((edge) => {
-          let nextNode = null;
 
-          nodes.forEach((node) => {
-            edge.target === node.id ? (nextNode = node) : (nextNode = null);
-          });
 
-          setNodes((nodes) =>
-            nodes.map((n) =>
-              edge.target === n.id ? { ...n, hidden: !node.hidden } : node,
-            ),
-          );
 
-          nextNode !== null && findChildrenOf(nextNode);
-        });
-    };
-
-    findChildrenOf(node);
-  };
-
-  const getDescendants = (nodeId: string): Set<string> => {
-    const descendants = new Set<string>();
-
-    const findChildrenOf = (nodeId: string) => {
-      edges
-        .filter((edge) => nodeId === edge.source)
-        .forEach((edge) => {
-          descendants.add(edge.target);
-          findChildrenOf(edge.target);
-        });
-    };
-
-    findChildrenOf(nodeId);
-
-    return descendants;
-  };
-
-  useEffect(() => {
-    // layoutFamilyTree(familyUnits).then(({ nodes, edges }) => {
-    //   setNodes(
-    //     nodes.map((node) => ({
-    //       ...node,
-    //       data: {
-    //         ...node.data,
-    //         onToogle: ToogleNodes,
-    //       },
-    //     })),
-    //   );
-    //   setEdges(edges);
-    //   console.log(nodes);
-    //   console.log(edges);
-    // });
-  }, []);
 
   return (
     <>

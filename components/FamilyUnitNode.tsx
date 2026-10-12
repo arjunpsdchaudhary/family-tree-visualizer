@@ -573,7 +573,6 @@ export default function FamilyUnitNode({
   const onClickHandler = () => {
     const node = getNode(id);
 
-    console.log("node id:", node);
 
     if (!node) {
       return;

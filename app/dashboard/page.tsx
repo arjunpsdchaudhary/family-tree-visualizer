@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { useAuth } from "@/contexts/AuthContextProvider";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
@@ -54,18 +53,13 @@ const publicTrees = [
 
 export default function DashboardPage() {
 
-  const {data, error, }=  authClient.useSession();
+  const {data}=  authClient.useSession();
   const [myCanvases, setMyCanvases] = useState<MyCanvas[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // const { user } = useAuth();
   const router = useRouter();
 
-  useEffect(()=>{
-    if(!error){
-      console.log("data is here.....",data);
-    }
-  })
+  
 
   // =========================================================
   // FETCH MY CANVASES
@@ -79,27 +73,10 @@ export default function DashboardPage() {
         "/api/canvas/mycanvas",
       );
 
-      console.log("FULL API RESPONSE:", response);
-      console.log("RESPONSE DATA:", response.data);
-      console.log("IS ARRAY:", Array.isArray(response.data));
+      // console.log("FULL API RESPONSE:", response);
+      // console.log("RESPONSE DATA:", response.data);
+      // console.log("IS ARRAY:", Array.isArray(response.data));
 
-      /*
-       * Handle both:
-       *
-       * response.data = [
-       *   { id, name, ownerId, createdAt },
-       *   ...
-       * ]
-       *
-       * OR
-       *
-       * response.data = {
-       *   data: [
-       *     { id, name, ownerId, createdAt },
-       *     ...
-       *   ]
-       * }
-       */
 
       let canvases: MyCanvas[] = [];
 
@@ -109,8 +86,6 @@ export default function DashboardPage() {
         canvases = response.data.data;
       }
 
-      console.log("CANVASES TO RENDER:", canvases);
-      console.log("CANVAS COUNT:", canvases.length);
 
       setMyCanvases(canvases);
     } catch (error) {
@@ -133,11 +108,7 @@ export default function DashboardPage() {
   // DEBUG STATE
   // =========================================================
 
-  useEffect(() => {
-    console.log("STATE myCanvases:", myCanvases);
 
-    console.log("STATE LENGTH:", myCanvases.length);
-  }, [myCanvases]);
 
   // =========================================================
   // CREATE NEW CANVAS
@@ -147,7 +118,7 @@ export default function DashboardPage() {
     try {
       const response = await axios.post("/api/canvas");
 
-      console.log("CREATED CANVAS:", response.data);
+     
 
       const canvasId = response.data.id;
 
@@ -323,7 +294,7 @@ export default function DashboardPage() {
 ========================================================= */
 
 function CanvasCard({ canvas }: { canvas: MyCanvas }) {
-  console.log("RENDERING CANVAS:", canvas);
+
 
   return (
     <Link

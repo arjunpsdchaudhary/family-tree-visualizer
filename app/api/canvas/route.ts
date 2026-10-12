@@ -1,9 +1,6 @@
-import { db } from "@/db";
+
 import { auth } from "@/lib/auth";
-import { getCurrentUser, getSession } from "@/lib/auth/session";
 import { driver } from "@/lib/neo4j";
-import { Canvas } from "@/lib/types";
-import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 
 import { NextRequest, NextResponse } from "next/server";
