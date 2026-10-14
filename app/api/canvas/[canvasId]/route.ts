@@ -14,22 +14,6 @@ export async function GET(
 ) {
   const { canvasId } = await context.params;
 
-  console.log("canvas id ", canvasId);
-
-  // const session = await auth.api.getSession({
-  //   headers: await headers(),
-  // });
-
-  // Authorization check
-  // if (!session) {
-  //   return NextResponse.json(
-  //     { error: "Unauthorized: Please log in" },
-  //     { status: 401 },
-  //   );
-  // }
-
-  // Extract the verified user ID from the session
-  // const userId = session.user.id;
 
   const db_session = driver.session();
 
@@ -145,11 +129,7 @@ export async function PUT(request:NextRequest,
 
   const db_session = driver.session();
 
-  
-
   try{
-
-      console.log("---------------------step 01---------------")
 
       const { canvasId } = await params;
 
@@ -167,21 +147,16 @@ export async function PUT(request:NextRequest,
     );
   }
 
-   console.log("---------------------step 02---------------")
 
   const userId = session.user.id;
 
-  console.log("-------------userid ----", userId)
-  console.log("----canvasid--", canvas)
+  
   
   const result = await db_session.run(`MATCH(c {id:$id, ownerId:$ownerId } ) RETURN c`, {
         id: canvasId,
         ownerId : userId,
         
-      });
-
-      console.log("---------------------step 01---------------")
-      // console.log("result ", result.records[0]);
+      });     
   
       if (result.records.length === 0) {
         return NextResponse.json(
@@ -189,9 +164,6 @@ export async function PUT(request:NextRequest,
           { status: 404 },
         );
       }
-  
-      // const canvas = result.records[0].get("c").properties;
-
       const Person: Person[] = [];
   const Relationship: Relationship[] = [];
 

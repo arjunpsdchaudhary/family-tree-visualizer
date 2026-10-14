@@ -28,6 +28,9 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  emailVerified: boolean;
+  image: null|string;
+  updatedAt: string,
 }
 
 export interface Canvas {

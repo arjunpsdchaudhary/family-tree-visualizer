@@ -2,12 +2,13 @@
 
 import { Person } from "@/lib/types";
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Files } from "lucide-react";
+import { ArrowDown } from "lucide-react";
 import { useCanvas } from "@/contexts/CanvasContextProvider";
-import axios from "axios";
+
 
 import { type PutBlobResult } from "@vercel/blob";
 import { upload } from "@vercel/blob/client";
+import { toast } from "sonner";
 
 const extensionMap: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -314,7 +315,7 @@ const DetailsBar = () => {
     const phone = formData.get("phone")?.toString().trim();
 
     if (!name) {
-      console.error("Cannot create first node: name is required.");
+      toast.error("Cannot create first node: name is required.");
 
       return;
     }
@@ -390,19 +391,20 @@ const DetailsBar = () => {
     const phone = formData.get("phone")?.toString().trim();
 
     if (!name) {
-      console.error("Cannot add family member: name is required.");
+      toast.error("Cannot add family member: name is required.");
+      
 
       return;
     }
 
     if (!selectedPerson) {
-      console.error("Cannot add family member: no person selected.");
+      toast.error("Cannot add family member: no person selected.");
 
       return;
     }
 
     if (!relationship) {
-      console.error("Cannot add family member: relationship is required.");
+      toast.error("Cannot add family member: relationship is required.");
 
       return;
     }
@@ -418,7 +420,7 @@ const DetailsBar = () => {
     });
 
     if (!selectedNode) {
-      console.error("Could not find FamilyUnit for selected person.");
+      toast.error("Could not find FamilyUnit for selected person.");
 
       return;
     }
@@ -462,8 +464,17 @@ const DetailsBar = () => {
 
         person,
       });
-    } else {
-      console.warn(`Relationship "${relationship}" is not implemented yet.`);
+    } else if(relationship === "parent"){
+      await addNode({
+        type: "parent",
+        childUnitId: familyUnitId,
+        person
+        
+
+
+      })
+    }else{
+      toast.error(`Relationship "${relationship}" is not implemented yet.`);
 
       return;
     }
@@ -628,8 +639,8 @@ const DetailsBar = () => {
       setIsEditing(false);
 
       setProfilePreview(null);
-    } catch (error) {
-      console.error("Failed to delete person:", error);
+    } catch (error:any) {
+      toast.error(`Failed to delete person: ${error}`);
     }
   };
 
@@ -1061,9 +1072,9 @@ const DetailsBar = () => {
 
                         <option value="spouse">Spouse</option>
 
-                        {/* <option value="parent">Parent</option>
+                        <option value="parent">Parent</option>
 
-                        <option value="sibling">Sibling</option> */}
+                        {/* <option value="sibling">Sibling</option> */}
                       </select>
                     </div>
 

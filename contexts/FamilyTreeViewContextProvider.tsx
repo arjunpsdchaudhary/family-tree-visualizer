@@ -15,8 +15,7 @@ import React, {
 type FamilyTreeContextType = {
   nodes: Node[];
   edges: Edge[];
-  //   familyUnits: FamilyUnit[];
-  //   setFamilyUnits: React.Dispatch<React.SetStateAction<FamilyUnit[]>>;
+
 
   setNodes: Dispatch<SetStateAction<Node[]>>;
   setEdges: Dispatch<SetStateAction<Edge[]>>;
@@ -39,15 +38,13 @@ const FamilyTreeViewContextProvider = ({
 
   const [edges, setEdges] = useState<Edge[]>([]);
 
-  //   const [familyUnits, setFamilyUnits] = useState<FamilyUnit[]>([]);
+
 
   const [selectedPerson, setSelectedPerson] = useState<Person>();
 
   const { getNode, setCenter, getZoom } = useReactFlow();
 
-  const getHandlers = () => {
-    return { selectedPerson, setSelectedPerson };
-  };
+
 
   const toogleNodes = (node: Node, toogle: boolean) => {
     const findDescendentsOf = (currentNode: Node) => {
@@ -69,7 +66,7 @@ const FamilyTreeViewContextProvider = ({
             );
 
             findDescendentsOf(nextNode);
-            console.log(nextNode);
+          
           }
         });
     };

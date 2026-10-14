@@ -16,6 +16,7 @@ import { familyUnits } from "@/lib/familyData";
 
 import { Edge, Node } from "@xyflow/react";
 import { toPng, toSvg } from "html-to-image";
+import { toast } from "sonner";
 
 type AddNodeParams =
   | {
@@ -26,6 +27,11 @@ type AddNodeParams =
   | {
       type: "spouse";
       unitId: string;
+      person: Person;
+    }
+  | {
+      type: "parent";
+      childUnitId: string;
       person: Person;
     };
 
@@ -39,8 +45,8 @@ type CanvasContextType = {
   canvas: Canvas | null;
   setCanvas: Dispatch<SetStateAction<Canvas | null>>;
 
-  isPublic: boolean
-  setIsPublic: Dispatch<SetStateAction<boolean>>
+  isPublic: boolean;
+  setIsPublic: Dispatch<SetStateAction<boolean>>;
 
   setSelectedPerson: Dispatch<SetStateAction<Person | undefined>>;
   setSelectedPersonRef: RefObject<
@@ -73,14 +79,13 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
 
   const [canvas, setCanvas] = useState<Canvas | null>(null);
 
-   const [isPublic, setIsPublic] = useState<boolean>(false);
+  const [isPublic, setIsPublic] = useState<boolean>(false);
 
-   useEffect(()=>{
-    if(canvas && canvas.isPublic){
-      setIsPublic(canvas.isPublic)
+  useEffect(() => {
+    if (canvas && canvas.isPublic) {
+      setIsPublic(canvas.isPublic);
     }
-
-   }, [canvas])
+  }, [canvas]);
 
   const createFirstNode = async (person: Person) => {
     const familyUnitId = `family-${crypto.randomUUID()}`;
@@ -107,9 +112,9 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /*
-   * =========================================================
-   * CONVERT REACT FLOW NODES -> FAMILY UNITS
-   * =========================================================
+- =========================================================
+- CONVERT REACT FLOW NODES -> FAMILY UNITS
+- =========================================================
    */
 
   const getFamilyUnits = (): FamilyUnit[] => {
@@ -136,18 +141,18 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /*
-   * =========================================================
-   * ADD CHILD / SPOUSE
-   * =========================================================
+- =========================================================
+- ADD CHILD / SPOUSE / PARENT
+- =========================================================
    */
 
   const addNode = async (params: AddNodeParams) => {
     const units = getFamilyUnits();
 
     /*
-     * =======================================================
-     * ADD CHILD
-     * =======================================================
+- =======================================================
+- ADD CHILD
+- =======================================================
      */
 
     if (params.type === "child") {
@@ -156,7 +161,7 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
       const parentUnit = units.find((unit) => unit.id === parentUnitId);
 
       if (!parentUnit) {
-        console.error("Parent FamilyUnit not found:", parentUnitId);
+        toast.error(`Parent FamilyUnit not found: ${parentUnitId}`);
 
         return;
       }
@@ -168,7 +173,7 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
       };
 
       /*
-       * Set parent IDs.
+- Set parent IDs.
        */
 
       if (parentUnit.person.gender === "male") {
@@ -180,8 +185,8 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
       }
 
       /*
-       * If FamilyUnit has spouse,
-       * use spouse as the other parent.
+- If FamilyUnit has spouse,
+- use spouse as the other parent.
        */
 
       if (parentUnit.spouse) {
@@ -234,9 +239,9 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
     }
 
     /*
-     * =======================================================
-     * ADD SPOUSE
-     * =======================================================
+- =======================================================
+- ADD SPOUSE
+- =======================================================
      */
 
     if (params.type === "spouse") {
@@ -245,13 +250,13 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
       const unit = units.find((item) => item.id === unitId);
 
       if (!unit) {
-        console.error("FamilyUnit not found:", unitId);
+        toast.error(`FamilyUnit not found: ${unitId}`);
 
         return;
       }
 
       if (unit.spouse) {
-        console.error("This FamilyUnit already has a spouse.");
+        toast.error("This FamilyUnit already has a spouse.");
 
         return;
       }
@@ -291,13 +296,139 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
       setSelectedPersonRef.current?.({
         ...updatedSpouse,
       });
+
+      return;
+    }
+
+    /*
+- =======================================================
+- ADD PARENT
+- =======================================================
+     */
+
+    if (params.type === "parent") {
+      const { childUnitId, person: newParent } = params;
+
+      const childUnit = units.find((unit) => unit.id === childUnitId);
+
+      if (!childUnit) {
+        toast.error(`Child FamilyUnit not found: ${childUnitId}`);
+
+        return;
+      }
+
+      // Check if a parent family unit already exists for this child unit
+      const existingParentUnit = units.find((unit) =>
+        unit.childUnitIds.includes(childUnitId)
+      );
+
+      if (existingParentUnit) {
+        // If the parent unit already has both person and spouse, block it!
+        if (existingParentUnit.spouse) {
+          toast.error("This child already has two parents assigned.");
+          return;
+        }
+
+        // Otherwise, the parent unit has 1 person, so add the new parent as the spouse
+        const parentPerson: Person = { ...newParent };
+        const isMale = parentPerson.gender === "male";
+        const isFemale = parentPerson.gender === "female";
+
+        parentPerson.spouseId = existingParentUnit.person.id;
+
+        const updatedParentPerson: Person = {
+          ...existingParentUnit.person,
+          spouseId: parentPerson.id,
+        };
+
+        const childPerson = { ...childUnit.person };
+        if (isMale) childPerson.fatherId = parentPerson.id;
+        if (isFemale) childPerson.motherId = parentPerson.id;
+
+        const updatedUnits = units.map((unit) => {
+          if (unit.id === existingParentUnit.id) {
+            return {
+              ...unit,
+              person: updatedParentPerson,
+              spouse: parentPerson,
+            };
+          }
+          if (unit.id === childUnitId) {
+            return {
+              ...unit,
+              person: childPerson,
+            };
+          }
+          return unit;
+        });
+
+        const result = await layoutFamilyTree(updatedUnits);
+
+        setNodes(result.nodes);
+
+        setEdges(result.edges);
+
+        setSelectedPersonRef.current?.({ ...parentPerson });
+
+        return;
+      }
+
+      // Also check if both fatherId and motherId are already set on the child person directly
+      const hasFather = Boolean(childUnit.person.fatherId);
+      const hasMother = Boolean(childUnit.person.motherId);
+
+      if (hasFather && hasMother) {
+        toast.error("This child already has both parents assigned.");
+        return;
+      }
+
+      // If no parent unit exists yet, create a new parent family unit above
+      const newParentUnitId = `family-${crypto.randomUUID()}`;
+      const parentPerson: Person = { ...newParent };
+
+      const isMale = parentPerson.gender === "male";
+      const isFemale = parentPerson.gender === "female";
+
+      const childPerson = { ...childUnit.person };
+      if (isMale) childPerson.fatherId = parentPerson.id;
+      if (isFemale) childPerson.motherId = parentPerson.id;
+
+      const newParentUnit: FamilyUnit = {
+        id: newParentUnitId,
+        person: parentPerson,
+        spouse: undefined,
+        childUnitIds: [childUnitId],
+        hidden: false,
+      };
+
+      const updatedUnits = units.map((unit) => {
+        if (unit.id === childUnitId) {
+          return {
+            ...unit,
+            person: childPerson,
+          };
+        }
+        return unit;
+      });
+
+      updatedUnits.push(newParentUnit);
+
+      const result = await layoutFamilyTree(updatedUnits);
+
+      setNodes(result.nodes);
+
+      setEdges(result.edges);
+
+      setSelectedPersonRef.current?.({ ...parentPerson });
+
+      return;
     }
   };
 
   /*
-   * =========================================================
-   * UPDATE PERSON
-   * =========================================================
+- =========================================================
+- UPDATE PERSON
+- =========================================================
    */
 
   const updatePerson = async (updatedPerson: Person) => {
@@ -334,23 +465,23 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
     });
 
     if (!found) {
-      console.error(
-        "Could not update person. Person not found:",
-        updatedPerson.id,
+      toast.error(
+        `Could not update person. Person not found:
+        ${updatedPerson.id}`
       );
 
       return;
     }
 
     /*
-     * Keep spouse relationships synchronized.
+- Keep spouse relationships synchronized.
      */
 
     const synchronizedUnits = updatedUnits.map((unit) => {
       let updatedUnit = unit;
 
       /*
-       * Main person's spouse.
+- Main person's spouse.
        */
 
       if (unit.person.spouseId) {
@@ -374,7 +505,7 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
       }
 
       /*
-       * Spouse person's spouse.
+- Spouse person's spouse.
        */
 
       if (unit.spouse?.spouseId) {
@@ -412,9 +543,9 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /*
-   * =========================================================
-   * DELETE PERSON
-   * =========================================================
+- =========================================================
+- DELETE PERSON
+- =========================================================
    */
 
   const deletePerson = async (personId: string) => {
@@ -425,17 +556,17 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
     );
 
     if (!targetUnit) {
-      console.error("Could not delete person. Person not found:", personId);
+      toast.error(`Could not delete person. Person not found:${personId}`);
 
       return;
     }
 
     /*
-     * =======================================================
-     * CASE 1
+- =======================================================
+- CASE 1
      *
-     * Main person is deleted but spouse remains.
-     * =======================================================
+- Main person is deleted but spouse remains.
+- =======================================================
      */
 
     if (targetUnit.person.id === personId && targetUnit.spouse) {
@@ -517,11 +648,11 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
     }
 
     /*
-     * =======================================================
-     * CASE 2
+- =======================================================
+- CASE 2
      *
-     * Spouse is deleted.
-     * =======================================================
+- Spouse is deleted.
+- =======================================================
      */
 
     if (targetUnit.spouse?.id === personId) {
@@ -585,13 +716,13 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
     }
 
     /*
-     * =======================================================
-     * CASE 3
+- =======================================================
+- CASE 3
      *
-     * FamilyUnit contains only one person.
+- FamilyUnit contains only one person.
      *
-     * Delete this FamilyUnit and all descendants.
-     * =======================================================
+- Delete this FamilyUnit and all descendants.
+- =======================================================
      */
 
     const unitsToDelete = new Set<string>();
@@ -617,13 +748,13 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
     collectDescendants(targetUnit.id);
 
     /*
-     * Remove deleted units.
+- Remove deleted units.
      */
 
     let remainingUnits = units.filter((unit) => !unitsToDelete.has(unit.id));
 
     /*
-     * Remove deleted child references.
+- Remove deleted child references.
      */
 
     remainingUnits = remainingUnits.map((unit) => ({
@@ -635,7 +766,7 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
     }));
 
     /*
-     * Collect deleted person IDs.
+- Collect deleted person IDs.
      */
 
     const deletedPersonIds = new Set<string>();
@@ -651,7 +782,7 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
       });
 
     /*
-     * Clean parent references.
+- Clean parent references.
      */
 
     remainingUnits = remainingUnits.map((unit) => {
@@ -693,7 +824,7 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
     });
 
     /*
-     * Tree is empty.
+- Tree is empty.
      */
 
     if (remainingUnits.length === 0) {
@@ -707,7 +838,7 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
     }
 
     /*
-     * Recalculate layout.
+- Recalculate layout.
      */
 
     const result = await layoutFamilyTree(remainingUnits);
@@ -727,9 +858,9 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /*
-   * =========================================================
-   * EXPORT PNG
-   * =========================================================
+- =========================================================
+- EXPORT PNG
+- =========================================================
    */
 
   const exportPNG = async () => {
@@ -757,9 +888,9 @@ export const CanvasContexProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /*
-   * =========================================================
-   * EXPORT SVG
-   * =========================================================
+- =========================================================
+- EXPORT SVG
+- =========================================================
    */
 
   const exportSVG = async () => {

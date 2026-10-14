@@ -35,7 +35,7 @@ export default function PublicTreesPage() {
     setError("");
 
     try {
-      const response = await axios.get("/api/canvas/public");
+      const response = await axios.get("/api/canvas/publictrees");
 
 
       console.log("---------------------------response", response)

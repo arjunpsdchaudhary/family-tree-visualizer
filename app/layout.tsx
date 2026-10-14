@@ -3,9 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { DataContextProvider } from "@/contexts/DataContextProvider";
 import { ReactFlowProvider } from "@xyflow/react";
-import NavBar from "@/components/NavBar";
 import { Toaster } from "@/components/ui/sonner";
-import { AuthContextProvider } from "@/contexts/AuthContextProvider";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

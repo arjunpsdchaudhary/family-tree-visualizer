@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
       id: id,
       
     });
-    // console.log("result ", result.records[0]);
+  
 
     if (result.records.length === 0) {
       return NextResponse.json(
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
 
     if(canvas.isPublic){
 
-      console.log("--------------public canvas-------------")
+  
 
     return NextResponse.json(
       {
@@ -142,7 +142,6 @@ export async function GET(request: NextRequest) {
 
     }
 
-     console.log("--------------setp 2 canvas-------------")
 
        const session = await auth.api.getSession({
       headers: await headers()

@@ -7,7 +7,6 @@ import axios from "axios";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { authClient, signIn } from "@/lib/auth-client";
-import { signUp } from "@/server/user";
 
 export default function SignUpPage() {
   const [userName, setUserName] = useState<string>("");

@@ -73,9 +73,9 @@ export default function DashboardPage() {
         "/api/canvas/mycanvas",
       );
 
-      // console.log("FULL API RESPONSE:", response);
-      // console.log("RESPONSE DATA:", response.data);
-      // console.log("IS ARRAY:", Array.isArray(response.data));
+      console.log("FULL API RESPONSE:", response);
+      console.log("RESPONSE DATA:", response.data);
+      console.log("IS ARRAY:", Array.isArray(response.data));
 
 
       let canvases: MyCanvas[] = [];
@@ -101,7 +101,7 @@ export default function DashboardPage() {
   // =========================================================
 
   useEffect(() => {
-    fetchUserData();
+     fetchUserData();
   }, []);
 
   // =========================================================
@@ -150,7 +150,7 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-2">
             <Link
-              href="/public"
+              href="/publictrees"
               className="hidden rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 sm:block"
             >
               Public Trees

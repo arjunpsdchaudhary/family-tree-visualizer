@@ -56,7 +56,7 @@ export default function Home() {
           {/* Navigation */}
           <nav className="flex items-center gap-1">
             <Link
-              href="/public"
+              href="/publictrees"
               className="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100"
             >
               Public Trees
@@ -113,7 +113,7 @@ export default function Home() {
 
             {/* Public trees */}
             <Link
-              href="/public"
+              href="/publictrees"
               className="mt-5 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900"
             >
               Explore public family trees
@@ -171,7 +171,7 @@ export default function Home() {
           </div>
 
           <Link
-            href="/public"
+            href="/publictrees"
             className="inline-flex items-center gap-2 text-sm font-medium text-slate-900"
           >
             Browse trees

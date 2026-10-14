@@ -38,8 +38,6 @@ const Page = () => {
   const getData = async () => {
     const response = await axios.get(`/api/canvas/${id}`);
 
-    console.log("node datas:", response.data);
-
     const { nodes, edges } = await layoutFamilyTree(
       response.data.familyUnits
     );
@@ -58,7 +56,7 @@ const Page = () => {
         params: { id },
       });
 
-      console.log("canvas information:", response.data);
+    
       setCanvas(response.data);
 
       // Await so errors from getData() are caught here too
@@ -81,13 +79,7 @@ const Page = () => {
     getCanvas();
   }, [id]);
 
-  useEffect(() => {
-    console.log("canvas from setter:", canvas);
-  }, [canvas]);
-
-  useEffect(() => {
-    console.log("nodes:", nodes);
-  }, [nodes]);
+ 
 
   const handler = (
     sPerson: Person | undefined,
@@ -99,9 +91,6 @@ const Page = () => {
     setSelectedPersonRef.current = setSPerson;
   };
 
-  useEffect(() => {
-    console.log("canvas selected:", selectedPerson);
-  }, [selectedPerson]);
 
   if (loading) {
     return <p>Loading...</p>;

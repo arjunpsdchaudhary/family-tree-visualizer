@@ -19,7 +19,6 @@ import {
 
 import { useCanvas } from "@/contexts/CanvasContextProvider";
 import { exportFamilyTree } from "@/lib/exportFamilyTree";
-import { saveFamilyTree } from "@/lib/save";
 import { toast } from "sonner";
 import { Canvas } from "@/lib/types";
 import axios from "axios";
@@ -113,9 +112,12 @@ const NavBar = () => {
         };
 
 
+        console.log("data to be saved : ", updatedCanvas)
+
+
         setCanvas(updatedCanvas);
 
-        axios.put(`/api/canvas/${canvas.id}`,{ nodes, canvas })
+        axios.put(`/api/canvas/${canvas.id}`,{ nodes, canvas:updatedCanvas })
         // await saveFamilyTree(nodes, updatedCanvas);
         toast.success("Canvas Saved...");
       }
