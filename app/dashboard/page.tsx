@@ -241,7 +241,7 @@ export default function DashboardPage() {
           ) : (
             /* EMPTY */
 
-            <EmptyCanvas />
+            <EmptyCanvas  createCanvas={createCanvas}/>
           )}
         </section>
 
@@ -385,8 +385,13 @@ function PublicTreeCard({
 /* =========================================================
    EMPTY STATE
 ========================================================= */
+type EmptyCanvasProps = {
+  createCanvas :()=>Promise<void>,
 
-function EmptyCanvas() {
+
+}
+
+function EmptyCanvas({createCanvas}:{createCanvas:()=>Promise<void>}) {
   return (
     <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
       <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
@@ -399,13 +404,14 @@ function EmptyCanvas() {
         Create your first family tree and start connecting your family.
       </p>
 
-      <Link
-        href={`/canvas`}
+      <button
+  
+        onClick={createCanvas}
         className="mt-5 inline-flex h-9 items-center gap-2 rounded-lg bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
       >
         <Plus className="h-4 w-4" />
         Create Tree
-      </Link>
+      </button>
     </div>
   );
 }
