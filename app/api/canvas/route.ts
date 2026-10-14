@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST() {
 
+  console.log("----------setep 1-")
    const session = await auth.api.getSession({
       headers: await headers()
     });
@@ -17,14 +18,30 @@ export async function POST() {
     }
 
     const userId = session.user.id;
+
+    console.log("----------setep 2-")
+
+    console.log("Neo4j URI:", process.env.NEO4J_URI);
+console.log("Neo4j username:", process.env.NEO4J_USERNAME);
+console.log("Neo4j database:", process.env.NEO4J_DATABASE);
+
+try {
+  await driver.verifyConnectivity();
+  console.log("AuraDB connectivity successful");
+} catch (error) {
+  console.error("AuraDB connectivity failed:", error);
+  throw error;
+}
     
   const db_session = driver.session();
+
+  console.log("----------setep 3-")
   const currentTime = Date.now();
 
   try {
 
    
-
+    console.log("----------setep 3.5-",userId,currentTime)
 
     // const user = await getCurrentUser();
     // if (!user) {
@@ -61,6 +78,8 @@ export async function POST() {
       },
     );
 
+    console.log("----------setep 4-")
+
     if (result.records.length === 0) {
       return NextResponse.json(
         { error: "Unable to create Canvas" },
@@ -78,18 +97,20 @@ export async function POST() {
       },
       { status: 201 },
     );
-  } catch (error: any) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Internal server error",
-        authenticated: false,
-      },
-      { status: 500 },
-    );
-  } finally {
-    db_session.close();
-  }
+  }catch (error) {
+  console.error("Canvas creation failed:", error);
+
+  return NextResponse.json(
+    {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Unknown database error",
+    },
+    { status: 500 },
+  );
+} finally {
+  await db_session.close();
+}
 }
 
 export async function GET(request: NextRequest) {
