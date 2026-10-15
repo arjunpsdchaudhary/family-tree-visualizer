@@ -54,8 +54,9 @@ export default function FamilyTreeExport({
           panOnScroll={false}
           zoomOnPinch={false}
           preventScrolling={false}
+           className="bg-blue-50!"
         >
-          <Background />
+          
         </ReactFlow>
       </ReactFlowProvider>
     </div>
