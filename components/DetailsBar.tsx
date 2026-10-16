@@ -4,6 +4,7 @@ import { Person } from "@/lib/types";
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowDown } from "lucide-react";
 import { useCanvas } from "@/contexts/CanvasContextProvider";
+import { ulid } from 'ulid'
 
 
 import { type PutBlobResult } from "@vercel/blob";
@@ -263,7 +264,9 @@ const DetailsBar = () => {
     });
  
     if (selectedPerson) {
-      setSelectedPerson({ ...selectedPerson, imageUrl: newBlob.url });
+      updatePerson({...selectedPerson, imageUrl: newBlob.url})
+     
+      // setSelectedPerson({ ...selectedPerson, imageUrl: newBlob.url });
     }
   
 
@@ -321,7 +324,7 @@ const DetailsBar = () => {
     }
 
     const person: Person = {
-      id: crypto.randomUUID(),
+      id: ulid(),
 
       name,
 
@@ -514,6 +517,7 @@ const DetailsBar = () => {
     const dod = formData.get("dod")?.toString();
 
     const phone = formData.get("phone")?.toString().trim();
+    
 
     if (!name) {
       alert("Name is required.");
