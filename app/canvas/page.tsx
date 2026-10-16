@@ -79,6 +79,13 @@ const Page = () => {
     getCanvas();
   }, [id]);
 
+
+  useEffect(()=>{
+    console.log("nodes--", nodes);
+    console.log("edges---", edges);
+
+  },[nodes, edges])
+
  
 
   const handler = (
