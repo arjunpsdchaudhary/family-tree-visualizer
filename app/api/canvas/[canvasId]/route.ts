@@ -394,3 +394,87 @@ export async function PUT(request:NextRequest,
 
 
 }
+
+
+export async function DELETE(
+  request: NextRequest,
+  context: {
+    params: Promise<{ canvasId: string }>;
+  }
+) {
+  const { canvasId } = await context.params;
+  const db_session = driver.session();
+
+  try {
+    // 1. Verify authentication
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized: Please log in" },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
+    // 2. Verify canvas ownership
+    const result = await db_session.executeRead((tx) =>
+      tx.run(
+        `
+        MATCH (c:Canvas {id: $canvasId, ownerId: $userId})
+        RETURN c.id AS id
+        `,
+        {
+          canvasId,
+          userId,
+        }
+      )
+    );
+
+    if (result.records.length === 0) {
+      // Do not reveal whether another user's canvas exists.
+      return NextResponse.json(
+        { error: "Canvas not found or you are not authorized to delete it" },
+        { status: 404 }
+      );
+    }
+
+    // 3. Delete the canvas and its associated family-tree data
+    await db_session.executeWrite(async (tx) => {
+      await tx.run(
+        `
+        MATCH (c:Canvas {id: $canvasId, ownerId: $userId})
+
+        OPTIONAL MATCH (p:Person)-[:IN]->(c)
+
+        WITH c, collect(DISTINCT p) AS people
+
+        FOREACH (person IN people | DETACH DELETE person)
+
+        DETACH DELETE c
+        `,
+        {
+          canvasId,
+          userId,
+        }
+      );
+    });
+
+    return NextResponse.json(
+      { message: "Canvas deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting canvas:", error);
+
+    return NextResponse.json(
+      { error: "Failed to delete canvas" },
+      { status: 500 }
+    );
+  } finally {
+    await db_session.close();
+  }
+}

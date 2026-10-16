@@ -37,13 +37,6 @@ export default function PublicTreesPage() {
     try {
       const response = await axios.get("/api/canvas/publictrees");
 
-
-      console.log("---------------------------response", response)
-
-      // if (!Array.isArray(response.data)) {
-      //   throw new Error("Invalid response received from the public canvases API.");
-      // }
-
        setCanvases(response.data.trees);
     } catch (err) {
       console.error("Failed to fetch public canvases:", err);
@@ -269,10 +262,9 @@ export default function PublicTreesPage() {
 
                   <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
                     <CalendarDays className="h-3.5 w-3.5" />
-                    Created{" "}
-                    {Number.isNaN(Date.parse(canvas.createdAt))
-                      ? "date unavailable"
-                      : new Date(canvas.createdAt).toLocaleDateString()}
+                    {canvas.createdAt && !Number.isNaN(new Date(canvas.createdAt).getTime())
+  ? new Date(canvas.createdAt).toLocaleDateString()
+  : "date unavailable"}
                   </div>
 
                   <div className="mt-auto flex items-center justify-between pt-5">
