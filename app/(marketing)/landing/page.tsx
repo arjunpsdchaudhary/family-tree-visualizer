@@ -5,7 +5,7 @@ import { ArrowRight, Download, GitBranch } from "lucide-react";
 import FamilyTree from "@/components/FamilyTree";
 import { useEffect, useState } from "react";
 import { layoutFamilyTree } from "@/lib/elkLayout";
-import { familyUnits } from "@/lib/familyData";
+import { familyUnits, RoyalFamilyNepal } from "@/lib/familyData";
 import { Edge, Node } from "@xyflow/react";
 import FamilyTreeViewContextProvider from "@/contexts/FamilyTreeViewContextProvider";
 import FamilyTreeView from "@/components/FamilyTreeView";
@@ -19,12 +19,17 @@ export default function Home() {
   const [selectedPerson, setseletedP] = useState<Person | undefined>(undefined);
 
   useEffect(() => {
-    const getdata = async () => {
-      const { nodes, edges } = await layoutFamilyTree(familyUnits);
-      setNodes(nodes);
-      setEdges(edges);
-    };
-    getdata();
+    // const getdata = async () => {
+    //   const { nodes, edges } = await layoutFamilyTree(familyUnits);
+    //   setNodes(nodes);
+    //   setEdges(edges);
+    // };
+    // getdata();
+    
+
+
+    setNodes(RoyalFamilyNepal.nodes)
+    setEdges(RoyalFamilyNepal.edges);
   }, []);
 
   const handler = (
