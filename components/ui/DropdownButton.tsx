@@ -38,18 +38,23 @@ import { useEffect, useRef, useState } from "react";
     };
   }, []);
 
-  function handleSelect(option: string) {
-    if(option === "Switch Account"){
-        router.push("/signin");
+  async function handleSelect(option: string) {
+    if (option === "Switch Account") {
+      router.push("/signin");
     }
-    if(option === "Log Out"){
-       (async ()=>{
-         await authClient.signOut();
-         router.push("/signin");
-        })();
-
+    
+    if (option === "Log Out") {
+      await authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            router.push("/signin");
+            router.refresh(); // Ensures Next.js clears any cached Server Component states
+          },
+        },
+      });
     }
-  
+    
+    setIsOpen(false); // Close dropdown on selection
   }
 
 
