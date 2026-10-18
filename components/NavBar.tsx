@@ -54,9 +54,9 @@ const NavBar = () => {
     }
   }, [canvas]);
 
-  // Close export menu when clicking or touching outside (supports mobile & desktop)
+  // Handle outside clicks/touches reliably for desktop and mobile
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+    const handleOutsideAction = (event: MouseEvent | TouchEvent) => {
       if (
         exportMenuRef.current &&
         !exportMenuRef.current.contains(event.target as Node)
@@ -65,15 +65,15 @@ const NavBar = () => {
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
+    document.addEventListener("mousedown", handleOutsideAction);
+    document.addEventListener("touchstart", handleOutsideAction);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("mousedown", handleOutsideAction);
+      document.removeEventListener("touchstart", handleOutsideAction);
     };
   }, []);
 
-  // Clear import message
+  // Clear import message notification
   useEffect(() => {
     if (!importMessage) return;
 
@@ -85,17 +85,17 @@ const NavBar = () => {
     return () => window.clearTimeout(timeout);
   }, [importMessage]);
 
-  // Export family tree (Shared across mobile and desktop)
+  // Unified Export Handler
   const handleExport = async (
     format: "png" | "svg" | "pdf" | "json"
   ) => {
     try {
       setExporting(true);
       setExportOpen(false);
-      
-      // Small timeout to let UI paint loading state on mobile before heavy export work
+
+      // Brief tick delay so React paints the loading spinner state before heavy canvas processing
       await new Promise((resolve) => setTimeout(resolve, 50));
-      
+
       await exportFamilyTree(nodes, edges, format);
       toast.success(`Exported as ${format.toUpperCase()} successfully!`);
     } catch (error) {
@@ -216,9 +216,17 @@ const NavBar = () => {
         lg:px-5
       "
     >
-      {/* Mobile Row 1 & Desktop Left Side: Brand Logo and Name */}
+      {/* Hidden file input shared by both mobile & desktop */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        onChange={handleImport}
+      />
+
+      {/* Top Bar: Brand Logo and Title */}
       <div className="flex w-full min-w-0 items-center justify-between sm:w-auto sm:shrink-0">
-        {/* Brand */}
         <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
           <div
             className="
@@ -240,17 +248,8 @@ const NavBar = () => {
           </div>
         </div>
 
-        {/* Mobile Row 1 Right Side: Import & Export buttons */}
+        {/* Mobile-Only Action Buttons (Import & Export) */}
         <div className="flex shrink-0 items-center gap-1.5 sm:hidden">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json,application/json"
-            className="hidden"
-            onChange={handleImport}
-          />
-
-          {/* Import */}
           <button
             type="button"
             disabled={importing || exporting}
@@ -272,95 +271,45 @@ const NavBar = () => {
             <span>{importing ? "Importing" : "Import"}</span>
           </button>
 
-          {/* Export Dropdown Container (Shared Ref) */}
-          <div ref={exportMenuRef} className="relative shrink-0">
-            <button
-              type="button"
-              disabled={exporting || importing}
-              onClick={() => setExportOpen((prev) => !prev)}
-              className="
-                inline-flex h-9 shrink-0 items-center justify-center gap-1
-                rounded-lg bg-blue-600 px-2
-                text-[11px] font-semibold text-white
-                shadow-sm shadow-blue-200 transition-all
-                hover:bg-blue-700 active:scale-[0.98]
-                disabled:cursor-not-allowed disabled:opacity-50
-              "
-            >
-              {exporting ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-              ) : (
-                <Upload size={14} />
-              )}
-              <span>{exporting ? "Exporting" : "Export"}</span>
-              {!exporting && (
-                <ChevronDown
-                  size={12}
-                  className={`transition-transform duration-200 ${
-                    exportOpen ? "rotate-180" : ""
-                  }`}
-                />
-              )}
-            </button>
-
-            {/* Export dropdown menu */}
-            {exportOpen && !exporting && (
-              <div
-                className="
-                  absolute right-0 top-10 z-50
-                  w-52 max-w-[calc(100vw-1rem)]
-                  overflow-hidden rounded-xl border border-slate-200
-                  bg-white p-1.5 shadow-xl shadow-slate-900/10
-                "
-              >
-                <div className="px-2.5 pb-2 pt-1.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                    Export family tree
-                  </p>
-                </div>
-
-                <ExportOption
-                  icon={<FileImage size={16} />}
-                  label="PNG"
-                  description="High-quality image"
-                  onClick={() => handleExport("png")}
-                />
-                <ExportOption
-                  icon={<FileCode2 size={16} />}
-                  label="SVG"
-                  description="Scalable vector image"
-                  onClick={() => handleExport("svg")}
-                />
-                <ExportOption
-                  icon={<FileText size={16} />}
-                  label="PDF"
-                  description="Printable document"
-                  onClick={() => handleExport("pdf")}
-                />
-
-                <div className="my-1 border-t border-slate-100" />
-
-                <ExportOption
-                  icon={<Braces size={16} />}
-                  label="JSON"
-                  description="Family tree data"
-                  onClick={() => handleExport("json")}
-                />
-              </div>
+          {/* Export Menu Trigger (Mobile) */}
+          <button
+            type="button"
+            disabled={exporting || importing}
+            onClick={() => setExportOpen((prev) => !prev)}
+            className="
+              inline-flex h-9 shrink-0 items-center justify-center gap-1
+              rounded-lg bg-blue-600 px-2
+              text-[11px] font-semibold text-white
+              shadow-sm shadow-blue-200 transition-all
+              hover:bg-blue-700 active:scale-[0.98]
+              disabled:cursor-not-allowed disabled:opacity-50
+            "
+          >
+            {exporting ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              <Upload size={14} />
             )}
-          </div>
+            <span>{exporting ? "Exporting" : "Export"}</span>
+            {!exporting && (
+              <ChevronDown
+                size={12}
+                className={`transition-transform duration-200 ${
+                  exportOpen ? "rotate-180" : ""
+                }`}
+              />
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Desktop Right Side Controls Group */}
+      {/* Desktop Actions Group */}
       <div className="hidden sm:flex items-center gap-3 shrink-0">
-        {/* Public toggle */}
         <label className="flex shrink-0 items-center gap-2 text-xs font-medium text-slate-600">
           <span>Public</span>
           <Switch checked={isPublic} onChange={setIsPublic} />
         </label>
 
-        {/* Canvas name */}
         <input
           type="text"
           value={canvasName}
@@ -375,7 +324,6 @@ const NavBar = () => {
           "
         />
 
-        {/* Save */}
         <button
           type="button"
           aria-label="Save canvas"
@@ -391,118 +339,106 @@ const NavBar = () => {
           <Save size={16} />
         </button>
 
-        {/* Import & Export buttons for Desktop */}
-        <div className="flex shrink-0 items-center gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json,application/json"
-            className="hidden"
-            onChange={handleImport}
+        <button
+          type="button"
+          disabled={importing || exporting}
+          onClick={handleOpenImport}
+          className="
+            inline-flex h-9 shrink-0 items-center justify-center gap-2
+            rounded-lg border border-slate-200 bg-white px-3
+            text-xs font-semibold text-slate-700 shadow-sm
+            transition-all hover:border-slate-300 hover:bg-slate-50
+            active:scale-[0.98]
+            disabled:cursor-not-allowed disabled:opacity-50
+          "
+        >
+          {importing ? (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+          ) : (
+            <Download size={15} />
+          )}
+          <span>{importing ? "Importing" : "Import"}</span>
+        </button>
+
+        {/* Desktop Export Button */}
+        <button
+          type="button"
+          disabled={exporting || importing}
+          onClick={() => setExportOpen((prev) => !prev)}
+          className="
+            inline-flex h-9 shrink-0 items-center justify-center gap-2
+            rounded-lg bg-blue-600 px-3.5
+            text-xs font-semibold text-white
+            shadow-sm shadow-blue-200 transition-all
+            hover:bg-blue-700 active:scale-[0.98]
+            disabled:cursor-not-allowed disabled:opacity-50
+          "
+        >
+          {exporting ? (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+          ) : (
+            <Upload size={15} />
+          )}
+          <span>{exporting ? "Exporting" : "Export"}</span>
+
+          {!exporting && (
+            <ChevronDown
+              size={14}
+              className={`transition-transform duration-200 ${
+                exportOpen ? "rotate-180" : ""
+              }`}
+            />
+          )}
+        </button>
+      </div>
+
+      {/* SINGLE UNIFIED EXPORT DROPDOWN MENU */}
+      {exportOpen && !exporting && (
+        <div
+          ref={exportMenuRef}
+          className="
+            absolute right-3 top-12 z-50
+            w-52 max-w-[calc(100vw-1.5rem)]
+            overflow-hidden rounded-xl border border-slate-200
+            bg-white p-1.5 shadow-xl shadow-slate-900/10
+            sm:right-5 sm:top-14
+          "
+        >
+          <div className="px-2.5 pb-2 pt-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Export family tree
+            </p>
+          </div>
+
+          <ExportOption
+            icon={<FileImage size={16} />}
+            label="PNG"
+            description="High-quality image"
+            onClick={() => handleExport("png")}
+          />
+          <ExportOption
+            icon={<FileCode2 size={16} />}
+            label="SVG"
+            description="Scalable vector image"
+            onClick={() => handleExport("svg")}
+          />
+          <ExportOption
+            icon={<FileText size={16} />}
+            label="PDF"
+            description="Printable document"
+            onClick={() => handleExport("pdf")}
           />
 
-          {/* Import */}
-          <button
-            type="button"
-            disabled={importing || exporting}
-            onClick={handleOpenImport}
-            className="
-              inline-flex h-9 shrink-0 items-center justify-center gap-2
-              rounded-lg border border-slate-200 bg-white px-3
-              text-xs font-semibold text-slate-700 shadow-sm
-              transition-all hover:border-slate-300 hover:bg-slate-50
-              active:scale-[0.98]
-              disabled:cursor-not-allowed disabled:opacity-50
-            "
-          >
-            {importing ? (
-              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
-            ) : (
-              <Download size={15} />
-            )}
-            <span>{importing ? "Importing" : "Import"}</span>
-          </button>
+          <div className="my-1 border-t border-slate-100" />
 
-          {/* Export */}
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              disabled={exporting || importing}
-              onClick={() => setExportOpen((prev) => !prev)}
-              className="
-                inline-flex h-9 shrink-0 items-center justify-center gap-2
-                rounded-lg bg-blue-600 px-3.5
-                text-xs font-semibold text-white
-                shadow-sm shadow-blue-200 transition-all
-                hover:bg-blue-700 active:scale-[0.98]
-                disabled:cursor-not-allowed disabled:opacity-50
-              "
-            >
-              {exporting ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-              ) : (
-                <Upload size={15} />
-              )}
-              <span>{exporting ? "Exporting" : "Export"}</span>
-
-              {!exporting && (
-                <ChevronDown
-                  size={14}
-                  className={`transition-transform duration-200 ${
-                    exportOpen ? "rotate-180" : ""
-                  }`}
-                />
-              )}
-            </button>
-
-            {/* Export dropdown */}
-            {exportOpen && !exporting && (
-              <div
-                className="
-                  absolute right-0 top-11 z-50
-                  w-52 max-w-[calc(100vw-1rem)]
-                  overflow-hidden rounded-xl border border-slate-200
-                  bg-white p-1.5 shadow-xl shadow-slate-900/10
-                "
-              >
-                <div className="px-2.5 pb-2 pt-1.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                    Export family tree
-                  </p>
-                </div>
-
-                <ExportOption
-                  icon={<FileImage size={16} />}
-                  label="PNG"
-                  description="High-quality image"
-                  onClick={() => handleExport("png")}
-                />
-                <ExportOption
-                  icon={<FileCode2 size={16} />}
-                  label="SVG"
-                  description="Scalable vector image"
-                  onClick={() => handleExport("svg")}
-                />
-                <ExportOption
-                  icon={<FileText size={16} />}
-                  label="PDF"
-                  description="Printable document"
-                  onClick={() => handleExport("pdf")}
-                />
-
-                <div className="my-1 border-t border-slate-100" />
-
-                <ExportOption
-                  icon={<Braces size={16} />}
-                  label="JSON"
-                  description="Family tree data"
-                  onClick={() => handleExport("json")}
-                />
-              </div>
-            )}
-          </div>
+          <ExportOption
+            icon={<Braces size={16} />}
+            label="JSON"
+            description="Family tree data"
+            onClick={() => handleExport("json")}
+          />
         </div>
-      </div>
+      )}
 
       {/* Mobile Row 2: Public toggle, Canvas name input, Save button */}
       <div
@@ -545,7 +481,7 @@ const NavBar = () => {
         </button>
       </div>
 
-      {/* Import status message */}
+      {/* Import Notification Banner */}
       {importMessage && (
         <div
           role="status"

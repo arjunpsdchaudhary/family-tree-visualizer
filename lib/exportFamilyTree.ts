@@ -4,130 +4,42 @@ import { jsPDF } from "jspdf";
 
 type ExportFormat = "png" | "svg" | "pdf" | "json";
 
-/*
-- =========================================================
-- EXPORT IMAGE PLACEHOLDER
-- =========================================================
- *
-- This is used when html-to-image cannot fetch an external
-- image (such as Vercel Blob images).
- */
-
 const EXPORT_IMAGE_PLACEHOLDER =
   "data:image/svg+xml;charset=utf-8," +
   encodeURIComponent(`
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="78"
-      height="78"
-      viewBox="0 0 78 78"
-    >
-      <rect
-        width="78"
-        height="78"
-        rx="12"
-        fill="#f1f5f9"
-      />
-
-      <circle
-        cx="39"
-        cy="30"
-        r="12"
-        fill="#cbd5e1"
-      />
-
-      <path
-        d="M17 67c2-14 11-22 22-22s20 8 22 22"
-        fill="#cbd5e1"
-      />
+    <svg xmlns="http://www.w3.org/2000/svg" width="78" height="78" viewBox="0 0 78 78">
+      <rect width="78" height="78" rx="12" fill="#f1f5f9"/>
+      <circle cx="39" cy="30" r="12" fill="#cbd5e1"/>
+      <path d="M17 67c2-14 11-22 22-22s20 8 22 22" fill="#cbd5e1"/>
     </svg>
   `);
-
-function getImageExportOptions() {
-  return {
-    backgroundColor: "#ffffff",
-    imagePlaceholder: EXPORT_IMAGE_PLACEHOLDER,
-    cacheBust: false,
-  };
-}
-
-/*
-- =========================================================
-- EXPORT FUNCTION
-- =========================================================
- */
 
 export async function exportFamilyTree(
   nodes: Node[],
   edges: Edge[],
   format: ExportFormat = "png",
 ) {
-  // ==================================================
-  // 1. Find export React Flow container
-  // ==================================================
-
-  const exportRoot = document.querySelector(
-    "#family-tree-export",
-  ) as HTMLElement | null;
-
-  if (!exportRoot) {
-    throw new Error("Export container not found.");
-  }
-
-  const reactFlow = exportRoot.querySelector(
-    ".react-flow",
-  ) as HTMLElement | null;
-
-  if (!reactFlow) {
-    throw new Error("Export React Flow not found.");
-  }
-
-  const viewport = exportRoot.querySelector(
-    ".react-flow__viewport",
-  ) as HTMLElement | null;
-
-  if (!viewport) {
-    throw new Error("React Flow viewport not found.");
-  }
-
-  // ==================================================
-  // 2. JSON Export
-  // ==================================================
-
+  // 1. JSON Export
   if (format === "json") {
-    const exportData = {
-      nodes,
-      edges,
-    };
-
+    const exportData = { nodes, edges };
     const json = JSON.stringify(exportData, null, 2);
-
-    const blob = new Blob([json], {
-      type: "application/json",
-    });
-
+    const blob = new Blob([json], { type: "application/json" });
     downloadBlob(blob, "family-tree.json");
-
-    console.log("Family tree JSON export completed.");
-
     return;
   }
 
-  // ==================================================
-  // 3. Get visible nodes
-  // ==================================================
+  // 2. Target the active visible React Flow viewport on screen
+  const viewport = document.querySelector(".react-flow__viewport") as HTMLElement | null;
+  if (!viewport) {
+    throw new Error("React Flow viewport not found on screen.");
+  }
 
   const visibleNodes = nodes.filter((node) => !node.hidden);
-
   if (!visibleNodes.length) {
     throw new Error("No visible nodes to export.");
   }
 
-  // ==================================================
-  // 4. Calculate actual visual bounds from Node Data
-  // (Bulletproof on mobile & desktop, avoids getBoundingClientRect bugs)
-  // ==================================================
-
+  // 3. Calculate bounds from node data
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -136,8 +48,6 @@ export async function exportFamilyTree(
   visibleNodes.forEach((node) => {
     const x = node.position.x;
     const y = node.position.y;
-    
-    // Fallback widths/heights if DOM hasn't fully measured yet
     const width = node.measured?.width ?? node.width ?? 280;
     const height = node.measured?.height ?? node.height ?? 120;
 
@@ -147,228 +57,76 @@ export async function exportFamilyTree(
     maxY = Math.max(maxY, y + height);
   });
 
-  // ==================================================
-  // 5. Safety check
-  // ==================================================
-
-  if (
-    !Number.isFinite(minX) ||
-    !Number.isFinite(minY) ||
-    !Number.isFinite(maxX) ||
-    !Number.isFinite(maxY)
-  ) {
-    throw new Error("Could not calculate visual tree bounds.");
-  }
-
-  // ==================================================
-  // 6. Padding & Dimensions
-  // ==================================================
-
-  const padding = 200;
-
+  const padding = 150;
   const treeWidth = maxX - minX;
-
   const treeHeight = maxY - minY;
-
   const exportWidth = Math.ceil(treeWidth + padding * 2);
-
   const exportHeight = Math.ceil(treeHeight + padding * 2);
 
-  console.log("ACTUAL BOUNDS:", { minX, minY, maxX, maxY, treeWidth, treeHeight });
-  console.log("EXPORT SIZE:", { exportWidth, exportHeight });
-
-  // ==================================================
-  // 7. Save original styles
-  // ==================================================
-
-  const originalWidth = reactFlow.style.width;
-
-  const originalHeight = reactFlow.style.height;
-
-  const originalOverflow = reactFlow.style.overflow;
-
-  const originalTransform = viewport.style.transform;
-
-  const originalTransformOrigin = viewport.style.transformOrigin;
-
-  try {
-    // =================================================
-    // 8. Set exact export canvas size
-    // =================================================
-
-    reactFlow.style.width = `${exportWidth}px`;
-
-    reactFlow.style.height = `${exportHeight}px`;
-
-    reactFlow.style.overflow = "hidden";
-
-    // =================================================
-    // 9. Translate viewport to align tree with padding
-    // =================================================
-
-    const translateX = padding - minX;
-
-    const translateY = padding - minY;
-
-    viewport.style.transformOrigin = "0 0";
-
-    viewport.style.transform =
-      `translate(${translateX}px, ${translateY}px) scale(1)`;
-
-    // =================================================
-    // 10. Wait for browser paint
-    // =================================================
-
-    await waitForRender();
-
-    const imageExportOptions = getImageExportOptions();
-
-    // =================================================
-    // 11. Export PNG
-    // =================================================
-
-    if (format === "png") {
-      console.log("Starting PNG export...");
-
-      const dataUrl = await toPng(reactFlow, {
-        ...imageExportOptions,
-        width: exportWidth,
-        height: exportHeight,
-        pixelRatio: 2,
-        style: {
-          width: `${exportWidth}px`,
-          height: `${exportHeight}px`,
-          overflow: "hidden",
-        },
-      });
-
-      download(dataUrl, "family-tree.png");
-
-      console.log("Family tree PNG export completed.");
-
-      return;
+  // Get current viewport matrix transform values
+  const viewportStyle = window.getComputedStyle(viewport);
+  const transform = viewportStyle.transform;
+  let currentZoom = 1;
+  const matrixMatch = transform.match(/matrix\(([^)]+)\)/);
+  if (matrixMatch) {
+    const values = matrixMatch[1].split(",").map(Number);
+    if (Number.isFinite(values[0]) && values[0] > 0) {
+      currentZoom = values[0];
     }
+  }
 
-    // =================================================
-    // 12. Export SVG
-    // =================================================
+  // 4. Generate snapshot directly from viewport DOM
+  const imageExportOptions = {
+    backgroundColor: "#eff6ff", // matches bg-blue-50
+    imagePlaceholder: EXPORT_IMAGE_PLACEHOLDER,
+    cacheBust: false,
+    width: exportWidth,
+    height: exportHeight,
+    style: {
+      width: `${exportWidth}px`,
+      height: `${exportHeight}px`,
+      transform: `translate(${padding - minX}px, ${padding - minY}px) scale(1)`,
+      transformOrigin: "0 0",
+    },
+  };
 
-    if (format === "svg") {
-      console.log("Starting SVG export...");
+  if (format === "png") {
+    const dataUrl = await toPng(viewport, {
+      ...imageExportOptions,
+      pixelRatio: 2,
+    });
+    download(dataUrl, "family-tree.png");
+    return;
+  }
 
-      const dataUrl = await toSvg(reactFlow, {
-        ...imageExportOptions,
-        width: exportWidth,
-        height: exportHeight,
-        style: {
-          width: `${exportWidth}px`,
-          height: `${exportHeight}px`,
-          overflow: "hidden",
-        },
-      });
+  if (format === "svg") {
+    const dataUrl = await toSvg(viewport, imageExportOptions);
+    download(dataUrl, "family-tree.svg");
+    return;
+  }
 
-      download(dataUrl, "family-tree.svg");
+  if (format === "pdf") {
+    const dataUrl = await toPng(viewport, {
+      ...imageExportOptions,
+      pixelRatio: 2,
+    });
 
-      console.log("Family tree SVG export completed.");
+    const pxToMm = 25.4 / 96;
+    const pdfWidth = exportWidth * pxToMm;
+    const pdfHeight = exportHeight * pxToMm;
+    const orientation = pdfWidth > pdfHeight ? "landscape" : "portrait";
 
-      return;
-    }
+    const pdf = new jsPDF({
+      orientation,
+      unit: "mm",
+      format: [pdfWidth, pdfHeight],
+    });
 
-    // =================================================
-    // 13. Export PDF
-    // =================================================
-
-    if (format === "pdf") {
-      console.log("Starting PDF export...");
-
-      const dataUrl = await toPng(reactFlow, {
-        ...imageExportOptions,
-        width: exportWidth,
-        height: exportHeight,
-        pixelRatio: 2,
-        style: {
-          width: `${exportWidth}px`,
-          height: `${exportHeight}px`,
-          overflow: "hidden",
-        },
-      });
-
-      const pxToMm = 25.4 / 96;
-
-      const pdfWidth = exportWidth * pxToMm;
-
-      const pdfHeight = exportHeight * pxToMm;
-
-      const orientation = pdfWidth > pdfHeight ? "landscape" : "portrait";
-
-      const pdf = new jsPDF({
-        orientation,
-        unit: "mm",
-        format: [pdfWidth, pdfHeight],
-      });
-
-      pdf.addImage(
-        dataUrl,
-        "PNG",
-        0,
-        0,
-        pdfWidth,
-        pdfHeight,
-        undefined,
-        "FAST",
-      );
-
-      pdf.save("family-tree.pdf");
-
-      console.log("Family tree PDF export completed.");
-
-      return;
-    }
-
-    throw new Error(`Unsupported export format: ${format}`);
-  } catch (error) {
-    console.error("Family tree export failed:", error);
-
-    if (error instanceof Error) {
-      console.error("Export error message:", error.message);
-      console.error("Export error stack:", error.stack);
-    }
-
-    throw error;
-  } finally {
-    // =================================================
-    // 14. ALWAYS restore React Flow styles
-    // =================================================
-
-    reactFlow.style.width = originalWidth;
-
-    reactFlow.style.height = originalHeight;
-
-    reactFlow.style.overflow = originalOverflow;
-
-    viewport.style.transform = originalTransform;
-
-    viewport.style.transformOrigin = originalTransformOrigin;
+    pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+    pdf.save("family-tree.pdf");
+    return;
   }
 }
-
-// ====================================================
-// Wait for browser paint
-// ====================================================
-
-function waitForRender() {
-  return new Promise<void>((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        resolve();
-      });
-    });
-  });
-}
-
-// ====================================================
-// Download data URL
-// ====================================================
 
 function download(dataUrl: string, filename: string) {
   const link = document.createElement("a");
@@ -378,10 +136,6 @@ function download(dataUrl: string, filename: string) {
   link.click();
   link.remove();
 }
-
-// ====================================================
-// Download Blob
-// ====================================================
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);

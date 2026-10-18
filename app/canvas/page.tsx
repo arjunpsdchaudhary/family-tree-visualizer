@@ -120,7 +120,7 @@ const Page = () => {
           edgesParam={edges}
           getdata={handler}
         />
-        <FamilyTreeExport nodes={nodes} edges={edges} />
+        {/* <FamilyTreeExport nodes={nodes} edges={edges} /> */}
       </FamilyTreeViewContextProvider>
 
       <DetailsBar />
