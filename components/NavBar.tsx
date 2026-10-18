@@ -52,15 +52,11 @@ const NavBar = () => {
     if (canvas) {
       setCanvasName(canvas.name ?? "untitled");
     }
-    
   }, [canvas]);
 
-
-
-
-  // Close export menu when clicking outside
+  // Close export menu when clicking or touching outside (supports mobile & desktop)
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (
         exportMenuRef.current &&
         !exportMenuRef.current.contains(event.target as Node)
@@ -70,7 +66,11 @@ const NavBar = () => {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, []);
 
   // Clear import message
@@ -85,17 +85,22 @@ const NavBar = () => {
     return () => window.clearTimeout(timeout);
   }, [importMessage]);
 
-  // Export family tree
+  // Export family tree (Shared across mobile and desktop)
   const handleExport = async (
     format: "png" | "svg" | "pdf" | "json"
   ) => {
     try {
       setExporting(true);
       setExportOpen(false);
+      
+      // Small timeout to let UI paint loading state on mobile before heavy export work
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      
       await exportFamilyTree(nodes, edges, format);
+      toast.success(`Exported as ${format.toUpperCase()} successfully!`);
     } catch (error) {
       console.error("Export failed:", error);
-      alert("Failed to export family tree.");
+      alert("Failed to export family tree. Please try again.");
     } finally {
       setExporting(false);
     }
@@ -108,17 +113,15 @@ const NavBar = () => {
         const updatedCanvas: Canvas = {
           ...canvas,
           name: canvasName,
-          isPublic
+          isPublic,
         };
-
-
-        console.log("data to be saved : ", updatedCanvas)
-
 
         setCanvas(updatedCanvas);
 
-        axios.put(`/api/canvas/${canvas.id}`,{ nodes, canvas:updatedCanvas })
-        // await saveFamilyTree(nodes, updatedCanvas);
+        await axios.put(`/api/canvas/${canvas.id}`, {
+          nodes,
+          canvas: updatedCanvas,
+        });
         toast.success("Canvas Saved...");
       }
     } catch (error) {
@@ -138,8 +141,6 @@ const NavBar = () => {
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
-
-    // Allow selecting the same file again
     event.target.value = "";
 
     if (!file) return;
@@ -156,7 +157,6 @@ const NavBar = () => {
 
     try {
       setImporting(true);
-
       const text = await file.text();
 
       if (!text.trim()) {
@@ -174,57 +174,10 @@ const NavBar = () => {
         throw new Error("Invalid family tree JSON format.");
       }
 
-      // Validate nodes
-      const invalidNode = parsed.nodes.some((node: unknown) => {
-        if (!node || typeof node !== "object") return true;
-
-        const currentNode = node as {
-          id?: unknown;
-          data?: unknown;
-        };
-
-        return (
-          typeof currentNode.id !== "string" ||
-          typeof currentNode.data !== "object" ||
-          currentNode.data === null
-        );
-      });
-
-      if (invalidNode) {
-        throw new Error(
-          "The imported file contains invalid family tree nodes."
-        );
-      }
-
-      // Validate edges
-      const invalidEdge = parsed.edges.some((edge: unknown) => {
-        if (!edge || typeof edge !== "object") return true;
-
-        const currentEdge = edge as {
-          id?: unknown;
-          source?: unknown;
-          target?: unknown;
-        };
-
-        return (
-          typeof currentEdge.id !== "string" ||
-          typeof currentEdge.source !== "string" ||
-          typeof currentEdge.target !== "string"
-        );
-      });
-
-      if (invalidEdge) {
-        throw new Error(
-          "The imported file contains invalid family tree connections."
-        );
-      }
-
-      // Confirm replacement
       if (nodes.length > 0) {
         const confirmed = window.confirm(
           "Importing this family tree will replace your current tree. Do you want to continue?"
         );
-
         if (!confirmed) return;
       }
 
@@ -234,15 +187,12 @@ const NavBar = () => {
       setImportMessage("success");
       setMessageText(
         `Family tree imported successfully${
-          parsed.nodes.length
-            ? ` with ${parsed.nodes.length} nodes`
-            : ""
+          parsed.nodes.length ? ` with \${parsed.nodes.length} nodes` : ""
         }.`
       );
     } catch (error) {
       console.error("Import failed:", error);
       setImportMessage("error");
-
       if (error instanceof SyntaxError) {
         setMessageText("The selected file contains invalid JSON.");
       } else if (error instanceof Error) {
@@ -266,15 +216,8 @@ const NavBar = () => {
         lg:px-5
       "
     >
-      {/* 
-        Mobile Row 1 & Desktop Left Side: Brand Logo and Name
-      */}
-      <div
-        className="
-          flex w-full min-w-0 items-center justify-between
-          sm:w-auto sm:shrink-0
-        "
-      >
+      {/* Mobile Row 1 & Desktop Left Side: Brand Logo and Name */}
+      <div className="flex w-full min-w-0 items-center justify-between sm:w-auto sm:shrink-0">
         {/* Brand */}
         <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
           <div
@@ -297,10 +240,7 @@ const NavBar = () => {
           </div>
         </div>
 
-        {/* 
-          Mobile Row 1 Right Side: Import & Export buttons 
-          (Hidden on desktop since desktop has them at the far end)
-        */}
+        {/* Mobile Row 1 Right Side: Import & Export buttons */}
         <div className="flex shrink-0 items-center gap-1.5 sm:hidden">
           <input
             ref={fileInputRef}
@@ -332,7 +272,7 @@ const NavBar = () => {
             <span>{importing ? "Importing" : "Import"}</span>
           </button>
 
-          {/* Export */}
+          {/* Export Dropdown Container (Shared Ref) */}
           <div ref={exportMenuRef} className="relative shrink-0">
             <button
               type="button"
@@ -363,7 +303,7 @@ const NavBar = () => {
               )}
             </button>
 
-            {/* Export dropdown */}
+            {/* Export dropdown menu */}
             {exportOpen && !exporting && (
               <div
                 className="
@@ -412,15 +352,8 @@ const NavBar = () => {
         </div>
       </div>
 
-      {/* 
-        Desktop Right Side Controls Group (Public toggle, Canvas Name input, Save button, Import, Export):
-        Pushed to the far end on laptop/desktop screens.
-      */}
-      <div
-        className="
-          hidden sm:flex items-center gap-3 shrink-0
-        "
-      >
+      {/* Desktop Right Side Controls Group */}
+      <div className="hidden sm:flex items-center gap-3 shrink-0">
         {/* Public toggle */}
         <label className="flex shrink-0 items-center gap-2 text-xs font-medium text-slate-600">
           <span>Public</span>
@@ -491,7 +424,7 @@ const NavBar = () => {
           </button>
 
           {/* Export */}
-          <div ref={exportMenuRef} className="relative shrink-0">
+          <div className="relative shrink-0">
             <button
               type="button"
               disabled={exporting || importing}
@@ -571,22 +504,18 @@ const NavBar = () => {
         </div>
       </div>
 
-      {/* 
-        Mobile Row 2: Public toggle, Canvas name input, Save button
-      */}
+      {/* Mobile Row 2: Public toggle, Canvas name input, Save button */}
       <div
         className="
           flex w-full min-w-0 items-center gap-2 pt-1 border-t border-slate-100
           sm:hidden
         "
       >
-        {/* Public toggle */}
         <label className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600">
           <span>Public</span>
           <Switch checked={isPublic} onChange={setIsPublic} />
         </label>
 
-        {/* Canvas name */}
         <input
           type="text"
           value={canvasName}
@@ -600,7 +529,6 @@ const NavBar = () => {
           "
         />
 
-        {/* Save */}
         <button
           type="button"
           aria-label="Save canvas"

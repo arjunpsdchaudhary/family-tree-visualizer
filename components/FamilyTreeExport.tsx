@@ -2,7 +2,6 @@
 
 import {
   ReactFlow,
-  Background,
   ReactFlowProvider,
   type Node,
   type Edge,
@@ -29,16 +28,15 @@ export default function FamilyTreeExport({
     <div
       id="family-tree-export"
       style={{
-        position: "fixed",
-        left: "-100000px",
-        top: "0",
-
-        width: "100px",
-        height: "100px",
-
-        overflow: "hidden",
-
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "2000px",
+        height: "2000px",
+        opacity: 0,
         pointerEvents: "none",
+        zIndex: -9999,
+        overflow: "hidden",
       }}
     >
       <ReactFlowProvider>
@@ -54,10 +52,8 @@ export default function FamilyTreeExport({
           panOnScroll={false}
           zoomOnPinch={false}
           preventScrolling={false}
-           className="bg-blue-50!"
-        >
-          
-        </ReactFlow>
+          className="bg-blue-50!"
+        />
       </ReactFlowProvider>
     </div>
   );

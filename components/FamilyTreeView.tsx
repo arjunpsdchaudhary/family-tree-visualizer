@@ -20,6 +20,7 @@ type FamilyTreeViewProps = {
     setSelectedPerson: React.Dispatch<React.SetStateAction<Person | undefined>>,
   ) => void;
 };
+
 const FamilyTreeView = ({
   nodesParam,
   edgesParam,
@@ -51,31 +52,23 @@ const FamilyTreeView = ({
   }, [selectedPerson]);
 
   return (
-    <>
-      {/* Normal visible React Flow */}
-      <div className="flex-1 min-w-0 min-h-0 ">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          minZoom={0.05}
-          maxZoom={2}
-          className="bg-blue-50! family-tree-flow"
-          fitView
-        >
-          <Controls
-            position={"bottom-right"}
-            className="text-black bottom-2!"
-          />
-        </ReactFlow>
-      </div>
-
-      {/* Hidden export React Flow */}
-      {/* <FamilyTreeExport nodes={nodes} edges={edges} /> */}
-    </>
+    <div className="flex-1 min-w-0 min-h-0">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        minZoom={0.05}
+        maxZoom={2}
+        className="bg-blue-50! family-tree-flow"
+        fitView
+      >
+        <Controls
+          position={"bottom-right"}
+          className="text-black bottom-2!"
+        />
+      </ReactFlow>
+    </div>
   );
 };
-
-
 
 export default FamilyTreeView;
