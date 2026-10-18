@@ -28,12 +28,13 @@ export default function FamilyTreeExport({
     <div
       id="family-tree-export"
       style={{
-        position: "absolute",
+        position: "fixed",
         top: 0,
         left: 0,
         width: "2000px",
         height: "2000px",
         opacity: 0,
+        visibility: "hidden",
         pointerEvents: "none",
         zIndex: -9999,
         overflow: "hidden",

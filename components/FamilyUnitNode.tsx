@@ -10,7 +10,7 @@ import {
   Phone,
   Venus,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFamilyTreeView } from "@/contexts/FamilyTreeViewContextProvider";
 
 /*
@@ -150,7 +150,17 @@ function PersonCard({ person }: { person: Person }) {
 
   const imageUrl = getSafeImageUrl(person.imageUrl);
 
+  /* 
+    FIX: Reset imageError whenever the person's imageUrl changes 
+    so that a newly corrected or added URL attempts to load again.
+  */
+  useEffect(() => {
+    setImageError(false);
+  }, [person.imageUrl]);
+  
+
   const showImage = Boolean(imageUrl && !imageError);
+
 
   return (
     <div
@@ -211,9 +221,11 @@ function PersonCard({ person }: { person: Person }) {
                * If the image cannot be loaded, immediately
                * replace it visually with the initial fallback.
                */
+              
               onError={() => {
                 setImageError(true);
               }}
+           
             />
           ) : (
             <div
